@@ -80,7 +80,7 @@
                 
                 {% if posts %}
                     {% for post in posts %}
-                    <article class="post-card">
+                    <article class="post-card" id="post-{{ post.id }}">
                         <div class="post-header">
                             <img src="{% if post.user_avatar %}{% if post.user_avatar.startswith('http') %}{{ post.user_avatar }}{% else %}{{ url_for('static', filename=post.user_avatar) }}{% endif %}{% else %}https://avatar.iran.liara.run/public/40{% endif %}" 
                                  alt="{{ post.user_name }}" 
@@ -92,18 +92,52 @@
                             </div>
                         </div>
                         
-                        {% if post.content %}
-                        <div class="post-content">
-                            {{ post.content }}
+                        <!-- Post View Mode -->
+                        <div class="post-view" id="post-view-{{ post.id }}">
+                            {% if post.content %}
+                            <div class="post-content">
+                                {{ post.content }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if post.media_type == 'audio' and post.media_path %}
+                            <div class="post-audio">
+                                <audio controls class="audio-player">
+                                    <source src="{{ url_for('static', filename='uploads/' + post.media_path) }}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
                         
-                        {% if post.media_type == 'audio' and post.media_path %}
-                        <div class="post-audio">
-                            <audio controls class="audio-player">
-                                <source src="{{ url_for('static', filename='uploads/' + post.media_path) }}" type="audio/mpeg">
-                                Your browser does not support the audio element.
-                            </audio>
+                        <!-- Post Edit Mode (hidden by default) -->
+                        {% if post.post_owner_id == user_id %}
+                        <div class="post-edit" id="post-edit-{{ post.id }}" style="display: none;">
+                            <form method="POST" action="{{ url_for('edit_post', post_id=post.id) }}" enctype="multipart/form-data" class="inline-edit-form">
+                                <textarea name="content" rows="3" class="inline-edit-input" placeholder="Share your sound...">{{ post.content or '' }}</textarea>
+                                
+                                {% if post.media_type == 'audio' and post.media_path %}
+                                <div style="margin: var(--space-3) 0;">
+                                    <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: var(--space-2);">Current audio:</p>
+                                    <audio controls class="audio-player" style="width: 100%;">
+                                        <source src="{{ url_for('static', filename='uploads/' + post.media_path) }}" type="audio/mpeg">
+                                    </audio>
+                                    <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: var(--space-2);">
+                                        Upload new file to replace, or leave empty to keep current audio.
+                                    </p>
+                                </div>
+                                {% endif %}
+                                
+                                <label class="file-upload-label" style="margin: var(--space-3) 0;">
+                                    <input type="file" name="audio_file" accept="audio/*" style="display: none;">
+                                    <span class="file-upload-text">🎵 {% if post.media_type == 'audio' %}Replace Audio{% else %}Upload Audio{% endif %}</span>
+                                </label>
+                                
+                                <div class="inline-edit-actions">
+                                    <button type="submit" class="btn btn-primary btn-small">Save</button>
+                                    <button type="button" class="btn btn-small" onclick="cancelEdit({{ post.id }})">Cancel</button>
+                                </div>
+                            </form>
                         </div>
                         {% endif %}
                         
@@ -119,16 +153,42 @@
                             <button class="action-btn">
                                  Repost
                             </button>
+                            {% if post.post_owner_id == user_id %}
+                            <button class="action-btn" onclick="toggleEdit({{ post.id }})">✏️ Edit</button>
+                            <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" class="action-form" onsubmit="return confirm('Are you sure you want to delete this post?');">
+                                <button type="submit" class="action-btn delete-btn">🗑️ Delete</button>
+                            </form>
+                            {% endif %}
                         </div>
                         
                         <!-- Comments Section (hidden by default) -->
                         <div class="comments-section" id="comments-{{ post.id }}" style="display: none;">
                             <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}" class="comment-form">
-                                <input type="text" name="content" placeholder="Write a comment..." class="comment-input">
+                                <input type="text" name="content" placeholder="Write a comment..." class="comment-input" required>
                                 <button type="submit" class="btn btn-small">Post</button>
                             </form>
                             <div class="comments-list">
-                                <!-- Comments will be loaded here -->
+                                {% if post.comments %}
+                                    {% for comment in post.comments %}
+                                    <div class="comment-item">
+                                        <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
+                                            <img src="{% if comment.user_avatar %}{% if comment.user_avatar.startswith('http') %}{{ comment.user_avatar }}{% else %}{{ url_for('static', filename=comment.user_avatar) }}{% endif %}{% else %}https://avatar.iran.liara.run/public/40{% endif %}" 
+                                                 alt="{{ comment.user_name }}" 
+                                                 class="avatar-small"
+                                                 onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                                            <div style="flex: 1;">
+                                                <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-1);">
+                                                    <strong style="color: var(--color-text); font-size: 0.9rem;">{{ comment.user_name }}</strong>
+                                                    <span style="color: var(--color-text-muted); font-size: 0.8rem;">{{ comment.created_at.strftime('%b %d') if comment.created_at else '' }}</span>
+                                                </div>
+                                                <p style="color: var(--color-text); margin: 0; font-size: 0.9rem;">{{ comment.content }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p style="color: var(--color-text-muted); font-size: 0.9rem; padding: var(--space-3);">No comments yet. Be the first to comment!</p>
+                                {% endif %}
                             </div>
                         </div>
                     </article>
@@ -158,6 +218,31 @@
         function toggleComments(postId) {
             const commentsSection = document.getElementById('comments-' + postId);
             commentsSection.style.display = commentsSection.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function toggleEdit(postId) {
+            const postView = document.getElementById('post-view-' + postId);
+            const postEdit = document.getElementById('post-edit-' + postId);
+            
+            if (postView && postEdit) {
+                postView.style.display = postView.style.display === 'none' ? 'block' : 'none';
+                postEdit.style.display = postEdit.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        function cancelEdit(postId) {
+            const postView = document.getElementById('post-view-' + postId);
+            const postEdit = document.getElementById('post-edit-' + postId);
+            
+            if (postView && postEdit) {
+                postView.style.display = 'block';
+                postEdit.style.display = 'none';
+                // Reset form
+                const form = postEdit.querySelector('form');
+                if (form) {
+                    form.reset();
+                }
+            }
         }
     </script>
 </body>

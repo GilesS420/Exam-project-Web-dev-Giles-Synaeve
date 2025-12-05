@@ -47,7 +47,7 @@ def home():
         # Get posts with user info, ordered by newest first
         cursor.execute("""
             SELECT p.id, p.content, p.media_path, p.media_type, p.total_likes, p.created_at,
-                   u.id as user_id, u.name as user_name, u.avatar as user_avatar,
+                   u.id as user_id, u.name as user_name, u.avatar as user_avatar, p.user_id as post_owner_id,
                    (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = %s) as user_liked
             FROM posts p
             JOIN users u ON p.user_id = u.id
@@ -55,6 +55,17 @@ def home():
             LIMIT 50
         """, (user_id,))
         posts = cursor.fetchall()
+        
+        # Get comments for each post
+        for post in posts:
+            cursor.execute("""
+                SELECT c.id, c.content, c.created_at, u.name as user_name, u.avatar as user_avatar
+                FROM comments c
+                JOIN users u ON c.user_id = u.id
+                WHERE c.post_id = %s
+                ORDER BY c.created_at ASC
+            """, (post["id"],))
+            post["comments"] = cursor.fetchall()
         
         # Get user's following count
         cursor.execute("SELECT COUNT(*) as following_count FROM follows WHERE follower_id = %s", (user_id,))
@@ -468,9 +479,150 @@ def add_comment(post_id):
         return redirect(url_for("home"))
 
 
+@app.route("/post/<int:post_id>/edit", methods=["POST"])
+def edit_post(post_id):
+    """Edit a post (only owner can edit) - inline editing."""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        db, cursor = x.db()
+        user_id = session["user_id"]
+        
+        # Check if post exists and user is owner
+        cursor.execute(
+            "SELECT id, content, media_path, media_type, user_id FROM posts WHERE id = %s",
+            (post_id,)
+        )
+        post = cursor.fetchone()
+        
+        if not post:
+            cursor.close()
+            db.close()
+            return redirect(url_for("home"))
+        
+        # Check ownership
+        if post["user_id"] != user_id:
+            cursor.close()
+            db.close()
+            return redirect(url_for("home"))
+        
+        # POST - Update post
+        content = request.form.get("content", "").strip()
+        audio_file = request.files.get("audio_file")
+        
+        media_path = post["media_path"]
+        media_type = post["media_type"]
+        
+        # If new audio file uploaded, replace old one
+        if audio_file and audio_file.filename:
+            # Delete old audio file if exists
+            if media_path:
+                old_file_path = os.path.join("static", "uploads", media_path)
+                if os.path.exists(old_file_path):
+                    os.remove(old_file_path)
+            
+            # Save new audio file
+            filename = f"{user_id}_{uuid.uuid4().hex}_{audio_file.filename}"
+            upload_path = os.path.join("static", "uploads", filename)
+            os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+            audio_file.save(upload_path)
+            media_path = filename
+            media_type = "audio"
+        
+        # Update post
+        cursor.execute(
+            """
+            UPDATE posts 
+            SET content = %s, media_path = %s, media_type = %s, updated_at = NOW()
+            WHERE id = %s AND user_id = %s
+            """,
+            (content if content else None, media_path, media_type, post_id, user_id)
+        )
+        db.commit()
+        
+        if cursor.rowcount != 1:
+            raise Exception("Failed to update post", 400)
+        
+        cursor.close()
+        db.close()
+        
+        return redirect(url_for("home"))
+        
+    except Exception as e:
+        ic(e)
+        if "db" in locals():
+            db.rollback()
+        if "cursor" in locals():
+            cursor.close()
+        if "db" in locals():
+            db.close()
+        return redirect(url_for("home"))
+
+
+@app.route("/post/<int:post_id>/delete", methods=["POST"])
+def delete_post(post_id):
+    """Delete a post (only owner can delete)."""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        db, cursor = x.db()
+        user_id = session["user_id"]
+        
+        # Check if post exists and user is owner
+        cursor.execute(
+            "SELECT id, media_path, user_id FROM posts WHERE id = %s",
+            (post_id,)
+        )
+        post = cursor.fetchone()
+        
+        if not post:
+            cursor.close()
+            db.close()
+            return redirect(url_for("home"))
+        
+        # Check ownership
+        if post["user_id"] != user_id:
+            cursor.close()
+            db.close()
+            return redirect(url_for("home"))
+        
+        # Delete associated audio file if exists
+        if post["media_path"]:
+            file_path = os.path.join("static", "uploads", post["media_path"])
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        # Delete post (cascade will handle likes and comments)
+        cursor.execute(
+            "DELETE FROM posts WHERE id = %s AND user_id = %s",
+            (post_id, user_id)
+        )
+        db.commit()
+        
+        if cursor.rowcount != 1:
+            raise Exception("Failed to delete post", 400)
+        
+        cursor.close()
+        db.close()
+        
+        return redirect(url_for("home"))
+        
+    except Exception as e:
+        ic(e)
+        if "db" in locals():
+            db.rollback()
+        if "cursor" in locals():
+            cursor.close()
+        if "db" in locals():
+            db.close()
+        return redirect(url_for("home"))
+
+
 @app.route("/search")
 def search():
-    """Search for users and posts."""
+    """Search for users, posts, and songs."""
     if "user_id" not in session:
         return redirect(url_for("login"))
     
@@ -480,6 +632,7 @@ def search():
     
     try:
         db, cursor = x.db()
+        user_id = session["user_id"]
         
         # Search users
         cursor.execute(
@@ -488,10 +641,20 @@ def search():
         )
         users = cursor.fetchall()
         
-        # Search posts
+        # Check which users are being followed
+        for user in users:
+            if user["id"] != user_id:
+                cursor.execute(
+                    "SELECT id FROM follows WHERE follower_id = %s AND following_id = %s",
+                    (user_id, user["id"])
+                )
+                user["is_following"] = cursor.fetchone() is not None
+        
+        # Search posts (content)
         cursor.execute(
             """
-            SELECT p.id, p.content, p.created_at, u.name as user_name, u.avatar as user_avatar
+            SELECT p.id, p.content, p.media_path, p.media_type, p.total_likes, p.created_at, 
+                   u.name as user_name, u.avatar as user_avatar, u.id as user_id
             FROM posts p
             JOIN users u ON p.user_id = u.id
             WHERE p.content LIKE %s
@@ -502,10 +665,25 @@ def search():
         )
         posts = cursor.fetchall()
         
+        # Search songs (title and description)
+        cursor.execute(
+            """
+            SELECT s.id, s.title, s.description, s.file_path, s.total_likes, s.created_at,
+                   u.name as user_name, u.avatar as user_avatar, u.id as user_id
+            FROM songs s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.title LIKE %s OR s.description LIKE %s
+            ORDER BY s.created_at DESC
+            LIMIT 20
+            """,
+            (f"%{query}%", f"%{query}%")
+        )
+        songs = cursor.fetchall()
+        
         cursor.close()
         db.close()
         
-        return render_template("search.html", query=query, users=users, posts=posts)
+        return render_template("search.html", query=query, users=users, posts=posts, songs=songs, current_user_id=user_id)
     except Exception as e:
         ic(e)
         return redirect(url_for("home"))
@@ -763,6 +941,17 @@ def profile():
             LIMIT 50
         """, (user_id,))
         posts = cursor.fetchall()
+        
+        # Get comments for each post
+        for post in posts:
+            cursor.execute("""
+                SELECT c.id, c.content, c.created_at, u.name as user_name, u.avatar as user_avatar
+                FROM comments c
+                JOIN users u ON c.user_id = u.id
+                WHERE c.post_id = %s
+                ORDER BY c.created_at ASC
+            """, (post["id"],))
+            post["comments"] = cursor.fetchall()
         
         cursor.close()
         db.close()
@@ -1087,6 +1276,64 @@ def verify_email_change():
             cursor.close()
         if "db" in locals():
             db.close()
+
+
+@app.route("/profile/delete-account", methods=["GET", "POST"])
+def delete_account():
+    """Delete user account."""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    if request.method == "GET":
+        return render_template("delete_account.html")
+    
+    try:
+        db, cursor = x.db()
+        user_id = session["user_id"]
+        
+        # Get user's posts to delete associated files
+        cursor.execute("SELECT id, media_path FROM posts WHERE user_id = %s", (user_id,))
+        posts = cursor.fetchall()
+        
+        # Delete audio files
+        for post in posts:
+            if post["media_path"]:
+                file_path = os.path.join("static", "uploads", post["media_path"])
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+        
+        # Get user's avatar to delete
+        cursor.execute("SELECT avatar FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if user and user["avatar"] and not user["avatar"].startswith("http"):
+            avatar_path = os.path.join("static", user["avatar"])
+            if os.path.exists(avatar_path):
+                os.remove(avatar_path)
+        
+        # Delete user (cascade will handle posts, comments, likes, follows)
+        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        db.commit()
+        
+        if cursor.rowcount != 1:
+            raise Exception("Failed to delete account", 400)
+        
+        cursor.close()
+        db.close()
+        
+        # Clear session
+        session.clear()
+        
+        return redirect(url_for("landing_page"))
+        
+    except Exception as e:
+        ic(e)
+        if "db" in locals():
+            db.rollback()
+        if "cursor" in locals():
+            cursor.close()
+        if "db" in locals():
+            db.close()
+        return render_template("delete_account.html", error="An error occurred while deleting your account."), 500
 
 
 @app.route("/logout")
