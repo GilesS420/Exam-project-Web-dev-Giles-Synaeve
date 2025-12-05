@@ -1,0 +1,59 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: music_flask
+    depends_on: 
+      - mariadb
+    ports:
+      - "80:80"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    # networks:
+    #   - arango-network
+
+  mariadb:
+    image: mariadb:10.6.20
+    container_name: music_mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: echoverse_app
+    ports:
+      - "3306:3306"
+    volumes: 
+      - mariadb_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  arangodb:
+    image: arangodb:latest
+    container_name: arangodb
+    environment:
+      ARANGO_ROOT_PASSWORD: password
+    ports:
+      - "8529:8529"
+    volumes:
+      - arango_data:/var/lib/arangodb3
+    networks:
+      - arango-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: music_phpmyadmin
+    depends_on:
+      - mariadb
+    environment:
+      PMA_HOST: mariadb
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "8080:80"
+
+volumes: 
+  mariadb_data:
+  arango_data:
+
+networks:
+  arango-network:
+    driver: bridge

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EchoVerse - Share Your Sound</title>
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/landing.css">
+    
+</head>
+<body>
+
+    <nav class="nav">
+        <div class="logo">EchoVerse</div>
+        <div class="nav-links">
+            <a class="btn" href='{{ url_for('login') }}'">Login</a>
+            <a class="btn btn-primary" href='{{ url_for('signup') }}'">Sign Up</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>Share Your Sound</h1>
+        <p>Upload your music, inspiration clips, beats, or voice notes.</p>
+        <a class="btn btn-primary big-btn" href='{{ url_for('signup') }}'">
+            Start Creating
+        </a>
+    </section>
+
+    <section class="explore">
+        <h2>Trending Today</h2>
+        <div class="cards">
+            <div class="card">Track 01 - Smooth Beats</div>
+            <div class="card">Track 02 - Verse Drop</div>
+            <div class="card">Track 03 - Synthwave Loop</div>
+        </div>
+    </section>
+
+</body>
+</html>

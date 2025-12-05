@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - EchoVerse</title>
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/home.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <div class="logo">EchoVerse</div>
+            <div class="nav-links">
+                <a href="{{ url_for('home') }}" class="nav-link active">Home</a>
+                <a href="#" class="nav-link">Explore</a>
+                <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
+            </div>
+            <div class="nav-user">
+                <a href="{{ url_for('profile') }}" class="user-name">{{ user_name }}</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-small">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Left Sidebar -->
+        <aside class="sidebar-left">
+            <div class="sidebar-section">
+                <h3>Your Stats</h3>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-value">{{ following }}</span>
+                        <span class="stat-label">Following</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{{ followers }}</span>
+                        <span class="stat-label">Followers</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Feed -->
+        <main class="feed">
+            <!-- Post Composer -->
+            <div class="post-composer">
+                <form method="POST" action="{{ url_for('create_post') }}" enctype="multipart/form-data" class="composer-form">
+                    <div class="composer-header">
+                        <img src="{% if current_user_avatar %}{% if current_user_avatar.startswith('http') %}{{ current_user_avatar }}{% else %}{{ url_for('static', filename=current_user_avatar) }}{% endif %}{% else %}https://avatar.iran.liara.run/public/40{% endif %}" 
+                             alt="Avatar" 
+                             class="avatar-small" 
+                             onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                        <textarea name="content" placeholder="Share your sound..." rows="3" class="composer-input"></textarea>
+                    </div>
+                    <div class="composer-actions">
+                        <label class="file-upload-btn">
+                            <input type="file" name="audio_file" accept="audio/*" style="display: none;">
+                            🎵 Upload Audio
+                        </label>
+                        <button type="submit" class="btn btn-primary">Post</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-section">
+                <form method="GET" action="{{ url_for('search') }}" class="search-form">
+                    <input type="text" name="q" placeholder="Search users, tracks..." class="search-input">
+                    <button type="submit" class="search-btn">🔍</button>
+                </form>
+            </div>
+
+            <!-- Posts Feed -->
+            <div class="posts-feed">
+                {% if error %}
+                <div class="error-message">{{ error }}</div>
+                {% endif %}
+                
+                {% if posts %}
+                    {% for post in posts %}
+                    <article class="post-card">
+                        <div class="post-header">
+                            <img src="{% if post.user_avatar %}{% if post.user_avatar.startswith('http') %}{{ post.user_avatar }}{% else %}{{ url_for('static', filename=post.user_avatar) }}{% endif %}{% else %}https://avatar.iran.liara.run/public/40{% endif %}" 
+                                 alt="{{ post.user_name }}" 
+                                 class="avatar"
+                                 onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                            <div class="post-author">
+                                <a href="#" class="author-name">{{ post.user_name }}</a>
+                                <span class="post-time">{{ post.created_at.strftime('%b %d, %Y') if post.created_at else '' }}</span>
+                            </div>
+                        </div>
+                        
+                        {% if post.content %}
+                        <div class="post-content">
+                            {{ post.content }}
+                        </div>
+                        {% endif %}
+                        
+                        {% if post.media_type == 'audio' and post.media_path %}
+                        <div class="post-audio">
+                            <audio controls class="audio-player">
+                                <source src="{{ url_for('static', filename='uploads/' + post.media_path) }}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="post-actions">
+                            <form method="POST" action="{{ url_for('toggle_like', post_id=post.id) }}" class="action-form">
+                                <button type="submit" class="action-btn {% if post.user_liked %}liked{% endif %}">
+                                     {{ post.total_likes or 0 }}
+                                </button>
+                            </form>
+                            <button class="action-btn" onclick="toggleComments({{ post.id }})">
+                                Comment
+                            </button>
+                            <button class="action-btn">
+                                 Repost
+                            </button>
+                        </div>
+                        
+                        <!-- Comments Section (hidden by default) -->
+                        <div class="comments-section" id="comments-{{ post.id }}" style="display: none;">
+                            <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}" class="comment-form">
+                                <input type="text" name="content" placeholder="Write a comment..." class="comment-input">
+                                <button type="submit" class="btn btn-small">Post</button>
+                            </form>
+                            <div class="comments-list">
+                                <!-- Comments will be loaded here -->
+                            </div>
+                        </div>
+                    </article>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-feed">
+                        <p>No posts yet. Be the first to share your sound!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </main>
+
+        <!-- Right Sidebar -->
+        <aside class="sidebar-right">
+            <div class="sidebar-section">
+                <h3>Trending</h3>
+                <div class="trending-list">
+                    <div class="trending-item">#NewMusic</div>
+                    <div class="trending-item">#Beats</div>
+                    <div class="trending-item">#SoundCloud</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        function toggleComments(postId) {
+            const commentsSection = document.getElementById('comments-' + postId);
+            commentsSection.style.display = commentsSection.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>
+

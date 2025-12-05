@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - EchoVerse</title>
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/home.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <div class="logo">EchoVerse</div>
+            <div class="nav-links">
+                <a href="{{ url_for('home') }}" class="nav-link">Home</a>
+                <a href="#" class="nav-link">Explore</a>
+                <a href="{{ url_for('profile') }}" class="nav-link active">Profile</a>
+            </div>
+            <div class="nav-user">
+                <a href="{{ url_for('profile') }}" class="user-name">{{ user.name }}</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-small">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <main class="feed" style="max-width: 800px; margin: 0 auto;">
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="profile-avatar-section">
+                    <img src="{{ url_for('static', filename=user.avatar) if user.avatar and not user.avatar.startswith('http') else (user.avatar or url_for('static', filename='default-avatar.png')) }}" 
+                         alt="{{ user.name }}" 
+                         class="profile-avatar" 
+                         id="avatar-preview"
+                         onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                    <form method="POST" action="{{ url_for('update_avatar') }}" enctype="multipart/form-data" class="avatar-form">
+                        <label class="file-upload-label">
+                            <input type="file" name="avatar_file" accept="image/*" class="avatar-file-input" id="avatar-file-input" style="display: none;">
+                            <span class="file-upload-text">Choose Image</span>
+                        </label>
+                        <button type="submit" class="btn btn-small">Update Avatar</button>
+                    </form>
+                </div>
+                <div class="profile-info">
+                    <h1>{{ user.name }}</h1>
+                    <p class="profile-email">{{ user.email }}</p>
+                    {% if user.bio %}
+                    <p class="profile-bio">{{ user.bio }}</p>
+                    {% endif %}
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <span class="stat-value">{{ post_count }}</span>
+                            <span class="stat-label">Posts</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">{{ following }}</span>
+                            <span class="stat-label">Following</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">{{ followers }}</span>
+                            <span class="stat-label">Followers</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="profile-tabs">
+                <button class="tab-btn active" onclick="showTab('edit')">Edit Profile</button>
+                <button class="tab-btn" onclick="showTab('posts')">My Posts</button>
+            </div>
+
+            <!-- Edit Profile Tab -->
+            <div id="edit-tab" class="tab-content active">
+                <div class="profile-sections">
+                    <!-- Update Bio -->
+                    <section class="profile-section">
+                        <h2>Update Bio</h2>
+                        <form method="POST" action="{{ url_for('update_bio') }}" class="profile-form">
+                            <textarea name="bio" placeholder="Tell us about yourself..." maxlength="500" class="profile-textarea">{{ user.bio or '' }}</textarea>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="char-count" id="bio-count">0/500</span>
+                                <button type="submit" class="btn btn-primary">Update Bio</button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <!-- Update Name -->
+                    <section class="profile-section">
+                        <h2>Update Name</h2>
+                        <form method="POST" action="{{ url_for('update_name') }}" class="profile-form">
+                            <input type="text" name="name" value="{{ user.name }}" placeholder="Name" required minlength="2" maxlength="100" class="profile-input">
+                            <button type="submit" class="btn btn-primary">Update Name</button>
+                        </form>
+                    </section>
+
+                    <!-- Update Email -->
+                    <section class="profile-section">
+                        <h2>Update Email</h2>
+                        <p class="section-note">A verification email will be sent to your new email address.</p>
+                        <form method="POST" action="{{ url_for('update_email') }}" class="profile-form">
+                            <input type="email" name="email" value="{{ user.email }}" placeholder="Email" required class="profile-input">
+                            <button type="submit" class="btn btn-primary">Update Email</button>
+                        </form>
+                    </section>
+
+                    <!-- Change Password -->
+                    <section class="profile-section">
+                        <h2>Change Password</h2>
+                        <p class="section-note">A verification email will be sent to your email address to change your password.</p>
+                        <form method="POST" action="{{ url_for('change_password') }}" class="profile-form">
+                            <button type="submit" class="btn btn-primary">Send Password Change Link</button>
+                        </form>
+                    </section>
+                </div>
+            </div>
+
+            <!-- My Posts Tab -->
+            <div id="posts-tab" class="tab-content">
+                <div class="profile-posts">
+                    {% if posts %}
+                        {% for post in posts %}
+                        <article class="post-card">
+                            <div class="post-header">
+                                <img src="{{ url_for('static', filename=user.avatar) if user.avatar and not user.avatar.startswith('http') else (user.avatar or url_for('static', filename='default-avatar.png')) }}" 
+                                     alt="{{ user.name }}" 
+                                     class="avatar"
+                                     onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                                <div class="post-author">
+                                    <a href="{{ url_for('profile') }}" class="author-name">{{ user.name }}</a>
+                                    <span class="post-time">{{ post.created_at.strftime('%b %d, %Y at %I:%M %p') if post.created_at else '' }}</span>
+                                </div>
+                            </div>
+                            
+                            {% if post.content %}
+                            <div class="post-content">
+                                {{ post.content }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if post.media_type == 'audio' and post.media_path %}
+                            <div class="post-audio">
+                                <audio controls class="audio-player">
+                                    <source src="{{ url_for('static', filename='uploads/' + post.media_path) }}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="post-actions">
+                                <span class="action-btn">❤️ {{ post.total_likes or 0 }}</span>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-feed">
+                            <p>You haven't posted anything yet. <a href="{{ url_for('home') }}">Share your first sound!</a></p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Preview avatar file upload
+        const avatarFileInput = document.getElementById('avatar-file-input');
+        const avatarPreview = document.getElementById('avatar-preview');
+        
+        if (avatarFileInput && avatarPreview) {
+            avatarFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        avatarPreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Bio character counter
+        const bioTextarea = document.querySelector('textarea[name="bio"]');
+        const bioCount = document.getElementById('bio-count');
+        if (bioTextarea && bioCount) {
+            bioTextarea.addEventListener('input', function() {
+                bioCount.textContent = this.value.length + '/500';
+            });
+            // Set initial count
+            bioCount.textContent = bioTextarea.value.length + '/500';
+        }
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
+

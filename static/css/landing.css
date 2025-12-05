@@ -1,0 +1,16 @@
+body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-main);
+}
+
+button {
+    background: var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    transition: var(--transition);
+}
+
+button:hover {
+    background: var(--color-accent-soft);
+}

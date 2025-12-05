@@ -1,0 +1,42 @@
+:root {
+    /*   COLORS   */
+    --color-bg: #0f172a;              /* Main background (dark blue) */
+    --color-bg-secondary: #1e293b;    /* Secondary sections */
+    
+    --color-accent: #f97316;          /* Orange highlight (buttons, links) */
+    --color-accent-soft: #fb923c;
+
+    --color-accent-alt: #8b5cf6;      /* Purple secondary accent */
+
+    --color-text: #f8fafc;            /* Main text */
+    --color-text-muted: #94a3b8;      /* Subtle text */
+
+    --color-success: #10b981;
+    --color-error: #ef4444;
+
+    /*   FONTS   */
+    --font-main: 'Inter', system-ui, sans-serif;
+
+    /*   SPACING   */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+
+    /*   BORDERS   */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    /*   SHADOW   */
+    --shadow-soft: 0 4px 10px rgba(0, 0, 0, 0.3);
+
+    /*   COMPONENT SIZES   */
+    --input-height: 44px;
+    --nav-height: 70px;
+
+    /*   TRANSITIONS   */
+    --transition: 0.2s ease;
+}
