@@ -1,0 +1,16 @@
+{# Avatar component - used in other components, so double underscore #}
+{# Usage: {% set avatar_url = post.user_avatar %}{% set alt_text = post.user_name %}{% set avatar_class = 'avatar' %}{% include "__avatar.html" %} #}
+{% if avatar_url %}
+    {% if avatar_url.startswith('http') %}
+        {% set final_avatar = avatar_url %}
+    {% else %}
+        {% set final_avatar = url_for('static', filename=avatar_url) %}
+    {% endif %}
+{% else %}
+    {% set final_avatar = url_for('static', filename='images/default-avatar.svg') %}
+{% endif %}
+<img src="{{ final_avatar }}" 
+     alt="{{ alt_text|default('Avatar') }}" 
+     class="{{ avatar_class|default('avatar') }}"
+     onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
+

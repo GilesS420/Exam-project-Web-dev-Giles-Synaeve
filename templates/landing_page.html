@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>EchoVerse - Share Your Sound</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    {% if not (session.get('user') or session.get('user_id')) %}
+    <link rel="prefetch" href="{{ url_for('login') }}">
+    <link rel="prefetch" href="{{ url_for('signup') }}">
+    {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
     <link rel="stylesheet" href="/static/css/landing.css">
     
@@ -22,9 +27,15 @@
     <section class="explore">
         <h2>Trending Today</h2>
         <div class="cards">
-            <div class="card">Track 01 - Smooth Beats</div>
-            <div class="card">Track 02 - Verse Drop</div>
-            <div class="card">Track 03 - Synthwave Loop</div>
+            <div class="card">
+                <span>Smooth Beats</span>
+            </div>
+            <div class="card">
+                <span>Verse Drop</span>
+            </div>
+            <div class="card">
+                <span>Synthwave Loop</span>
+            </div>
         </div>
     </section>
 

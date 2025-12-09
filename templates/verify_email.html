@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Email Verification - EchoVerse</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
     <link rel="stylesheet" href="/static/css/variables.css">
     <link rel="stylesheet" href="/static/css/landing.css">
 </head>
@@ -33,9 +34,9 @@
         </p>
         <div style="display: flex; gap: var(--space-4); justify-content: center; flex-wrap: wrap; width: 100%;">
             <a href="{{ url_for('login') }}" class="btn btn-primary big-btn" style="flex: 1; min-width: 200px;">Go to Login</a>
-            {% if email_type == "password_change" or email_type == "email_change" %}
+        {% if email_type == "password_change" or email_type == "email_change" %}
             <a href="{{ url_for('profile') }}" class="btn big-btn" style="flex: 1; min-width: 200px;">Back to Profile</a>
-            {% endif %}
+        {% endif %}
         </div>
         {% else %}
         <h1>Verification Failed</h1>

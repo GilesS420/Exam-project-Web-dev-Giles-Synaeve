@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile - EchoVerse</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    {% if session.get('user') or session.get('user_id') %}
+    <link rel="prefetch" href="{{ url_for('home') }}">
+    <link rel="prefetch" href="{{ url_for('explore') }}">
+    {% if is_admin %}
+    <link rel="prefetch" href="{{ url_for('admin_panel') }}">
+    {% endif %}
+    {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
     <link rel="stylesheet" href="/static/css/home.css">
 </head>
@@ -15,11 +23,14 @@
             <!-- Profile Header -->
             <div class="profile-header">
                 <div class="profile-avatar-section">
-                    <img src="{{ url_for('static', filename=user.avatar) if user.avatar and not user.avatar.startswith('http') else (user.avatar or url_for('static', filename='images/default-avatar.svg')) }}" 
-                         alt="{{ user.name }}" 
-                         class="profile-avatar" 
-                         id="avatar-preview"
-                         onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
+                    {% set avatar_url = user.avatar if user.avatar and not user.avatar.startswith('http') else (user.avatar if user.avatar else None) %}
+                    {% set alt_text = user.name %}
+                    {% set avatar_class = 'profile-avatar' %}
+                    {% include "__avatar.html" %}
+                    <script>
+                        // Update avatar preview ID for the profile page
+                        document.querySelector('.profile-avatar').id = 'avatar-preview';
+                    </script>
                     {% if is_own_profile %}
                     <form method="POST" action="{{ url_for('update_avatar') }}" enctype="multipart/form-data" class="avatar-form">
                         <label class="file-upload-label">
@@ -37,18 +48,9 @@
                     <p class="profile-bio">{{ user.bio }}</p>
                     {% endif %}
                     <div class="profile-stats">
-                        <div class="stat-item">
-                            <span class="stat-value">{{ post_count }}</span>
-                            <span class="stat-label">Posts</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">{{ following }}</span>
-                            <span class="stat-label">Following</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">{{ followers }}</span>
-                            <span class="stat-label">Followers</span>
-                        </div>
+                        {% set stat_value = post_count %}{% set stat_label = 'Posts' %}{% include "_stat_item.html" %}
+                        {% set stat_value = following %}{% set stat_label = 'Following' %}{% include "_stat_item.html" %}
+                        {% set stat_value = followers %}{% set stat_label = 'Followers' %}{% include "_stat_item.html" %}
                     </div>
                     {% if not is_own_profile %}
                     <div class="profile-actions" style="margin-top: var(--space-4); display: flex; gap: var(--space-3);">
@@ -167,10 +169,10 @@
                         {% for post in posts %}
                         <article class="post-card" id="post-{{ post.id }}">
                             <div class="post-header">
-                                <img src="{{ url_for('static', filename=user.avatar) if user.avatar and not user.avatar.startswith('http') else (user.avatar or url_for('static', filename='images/default-avatar.svg')) }}" 
-                                     alt="{{ user.name }}" 
-                                     class="avatar"
-                                     onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
+                                {% set avatar_url = user.avatar if user.avatar and not user.avatar.startswith('http') else (user.avatar if user.avatar else None) %}
+                                {% set alt_text = user.name %}
+                                {% set avatar_class = 'avatar' %}
+                                {% include "__avatar.html" %}
                                 <div class="post-author">
                                     <a href="{{ url_for('profile', profile_user_id=user.id) }}" class="author-name">{{ user.name }}</a>
                                     <span class="post-time">{{ post.created_at.strftime('%b %d, %Y at %I:%M %p') if post.created_at else '' }}</span>
@@ -225,8 +227,12 @@
                             </div>
                             
                             <div class="post-actions">
-                                <span class="action-btn">❤️ {{ post.total_likes or 0 }}</span>
-                                <button class="action-btn" onclick="toggleComments({{ post.id }})">💬 Comment</button>
+                                    <button type="button" class="action-btn {% if post.user_liked %}liked{% endif %}" onclick="toggleLike({{ post.id }})" id="like-btn-{{ post.id }}">
+                                    <span class="like-icon">{% if post.user_liked %}❤️{% else %}🤍{% endif %}</span> <span id="like-count-{{ post.id }}">{{ post.total_likes or 0 }}</span>
+                                </button>
+                                <button class="action-btn" onclick="toggleComments({{ post.id }})" id="comment-btn-{{ post.id }}">
+                                    💬 Comment <span id="comment-count-{{ post.id }}">{% if post.comment_count %}({{ post.comment_count }}){% endif %}</span>
+                                </button>
                                 {% if is_own_profile %}
                                 <button class="action-btn" onclick="toggleEdit({{ post.id }})">✏️ Edit</button>
                                 <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" class="action-form" onsubmit="return confirm('Are you sure you want to delete this post?');">
@@ -237,7 +243,7 @@
                             
                             <!-- Comments Section (hidden by default) -->
                             <div class="comments-section" id="comments-{{ post.id }}" style="display: none;">
-                            <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}" class="comment-form">
+                            <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}" class="comment-form" id="comment-form-{{ post.id }}" onsubmit="return addComment(event, {{ post.id }})">
                                 <input type="text" name="content" placeholder="Write a comment..." class="comment-input" 
                                        required maxlength="500" minlength="1" 
                                        title="Comment must be between 1 and 500 characters">
@@ -245,22 +251,9 @@
                             </form>
                                 <div class="comments-list">
                                     {% if post.comments %}
-                                        {% for comment in post.comments %}
-                                        <div class="comment-item">
-                                            <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
-                                                <img src="{% if comment.user_avatar %}{% if comment.user_avatar.startswith('http') %}{{ comment.user_avatar }}{% else %}{{ url_for('static', filename=comment.user_avatar) }}{% endif %}{% else %}{{ url_for('static', filename='images/default-avatar.svg') }}{% endif %}" 
-                                                     alt="{{ comment.user_name }}" 
-                                                     class="avatar-small"
-                                                     onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
-                                                <div style="flex: 1;">
-                                                    <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-1);">
-                                                        <strong style="color: var(--color-text); font-size: 0.9rem;">{{ comment.user_name }}</strong>
-                                                        <span style="color: var(--color-text-muted); font-size: 0.8rem;">{{ comment.created_at.strftime('%b %d') if comment.created_at else '' }}</span>
-                                                    </div>
-                                                    <p style="color: var(--color-text); margin: 0; font-size: 0.9rem;">{{ comment.content }}</p>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        {% for comment_item in post.comments %}
+                                            {% set comment = comment_item %}
+                                            {% include "__comment.html" %}
                                         {% endfor %}
                                     {% else %}
                                         <p style="color: var(--color-text-muted); font-size: 0.9rem; padding: var(--space-3);">No comments yet. Be the first to comment!</p>
@@ -358,6 +351,8 @@
     </script>
 
     {% include "_footer.html" %}
+    
+    <script src="/static/js/home.js"></script>
 </body>
 </html>
 

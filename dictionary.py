@@ -115,3 +115,75 @@ email_not_verified = {
     "dk": "Bekræft venligst din e-mailadresse før du logger ind. Tjek din indbakke for bekræftelseslinket.",
     "sp": "Por favor verifique su dirección de correo electrónico antes de iniciar sesión. Revise su bandeja de entrada para el enlace de verificación."
 }
+
+your_stats = {
+    "en": "Your Stats",
+    "dk": "Dine statistikker",
+    "sp": "Tus estadísticas"
+}
+
+following = {
+    "en": "Following",
+    "dk": "Følger",
+    "sp": "Siguiendo"
+}
+
+followers = {
+    "en": "Followers",
+    "dk": "Følgere",
+    "sp": "Seguidores"
+}
+
+share_your_sound = {
+    "en": "Share your sound...",
+    "dk": "Del dit lyd...",
+    "sp": "Comparte tu sonido..."
+}
+
+upload_audio = {
+    "en": "Upload Audio",
+    "dk": "Upload lyd",
+    "sp": "Subir audio"
+}
+
+tags_placeholder = {
+    "en": "Tags (comma-separated: music, beats, new)",
+    "dk": "Tags (kommasepareret: musik, beats, nyt)",
+    "sp": "Etiquetas (separadas por comas: música, beats, nuevo)"
+}
+
+post_button = {
+    "en": "Post",
+    "dk": "Indlæg",
+    "sp": "Publicar"
+}
+
+no_posts_yet = {
+    "en": "No posts yet. Be the first to share your sound!",
+    "dk": "Ingen indlæg endnu. Vær den første til at dele dit lyd!",
+    "sp": "Aún no hay publicaciones. ¡Sé el primero en compartir tu sonido!"
+}
+
+search = {
+    "en": "Search",
+    "dk": "Søg",
+    "sp": "Buscar"
+}
+
+search_placeholder = {
+    "en": "Search users, posts...",
+    "dk": "Søg brugere, indlæg...",
+    "sp": "Buscar usuarios, publicaciones..."
+}
+
+trending = {
+    "en": "Trending",
+    "dk": "Trending",
+    "sp": "Tendencias"
+}
+
+no_trending_tags = {
+    "en": "No trending tags yet",
+    "dk": "Ingen trending tags endnu",
+    "sp": "Aún no hay etiquetas trending"
+}

@@ -1,0 +1,18 @@
+{# Comment component - nested in post card, so double underscore #}
+{# Usage: {% set comment = comment_item %}{% include "__comment.html" %} #}
+<div class="comment-item">
+    <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
+        {% set avatar_url = comment.user_avatar %}
+        {% set alt_text = comment.user_name %}
+        {% set avatar_class = 'avatar-small' %}
+        {% include "__avatar.html" %}
+        <div style="flex: 1;">
+            <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-1);">
+                <strong style="color: var(--color-text); font-size: 0.9rem;">{{ comment.user_name }}</strong>
+                <span style="color: var(--color-text-muted); font-size: 0.8rem;">{{ comment.created_at.strftime('%b %d') if comment.created_at else '' }}</span>
+            </div>
+            <p style="color: var(--color-text); margin: 0; font-size: 0.9rem;">{{ comment.content }}</p>
+        </div>
+    </div>
+</div>
+

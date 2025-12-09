@@ -32,10 +32,42 @@ Session(app)
 ##############################
 @app.context_processor
 def global_variables():
+    def get_language_url(language):
+        """Generate URL for current page with different language"""
+        endpoint = request.endpoint
+        view_args = dict(request.view_args) if request.view_args else {}
+        query_args = dict(request.args)
+        
+        # Add/update language parameter
+        query_args['lan'] = language
+        
+        # Handle special cases
+        if endpoint == 'home':
+            return url_for('home', lan=language)
+        elif endpoint == 'profile':
+            profile_user_id = view_args.get('profile_user_id')
+            if profile_user_id:
+                return url_for('profile', profile_user_id=profile_user_id) + f'?lan={language}'
+            else:
+                return url_for('profile') + f'?lan={language}'
+        elif endpoint == 'explore':
+            tag_name = request.args.get('tag_name')
+            query_string = f'?lan={language}'
+            if tag_name:
+                query_string += f'&tag_name={tag_name}'
+            return url_for('explore') + query_string
+        elif endpoint in ['login', 'signup']:
+            return url_for(endpoint, lan=language)
+        else:
+            # For other endpoints, fallback to home with language
+            return url_for('home', lan=language)
+    
     return dict(
         dictionary = dictionary,
         x = x,
-        is_admin = is_admin()
+        is_admin = is_admin(),
+        get_language_url = get_language_url,
+        current_language = getattr(x, 'default_language', 'english')
     )
 
 ##############################
@@ -75,7 +107,9 @@ def require_admin():
     return None
 
 def is_ajax():
-    return request.is_json or request.headers.get('Content-Type') == 'application/json'
+    return (request.is_json or 
+            request.headers.get('Content-Type') == 'application/json' or
+            request.headers.get('X-Requested-With') == 'XMLHttpRequest')
 
 def json_response(data, status=200):
     return jsonify(data), status
@@ -94,10 +128,20 @@ def landing_page(lan="english"):
 
 
 @app.route("/home")
+@app.route("/home/<lan>")
 @x.no_cache
-def home():
+def home(lan=None):
     user = get_user()
     if not user: return redirect(url_for("login"))
+    
+    # Handle language parameter
+    if lan:
+        if lan not in x.allowed_languages: lan = "english"
+        x.default_language = lan
+    else:
+        # Default to english if no language specified
+        lan = x.default_language if hasattr(x, 'default_language') else "english"
+        x.default_language = lan
     
     try:
         db, cursor = x.db()
@@ -114,9 +158,13 @@ def home():
         q = """
             SELECT p.id, p.content, p.media_path, p.media_type, p.total_likes, p.created_at,
                    u.id as user_id, u.name as user_name, u.avatar as user_avatar, p.user_id as post_owner_id,
-                   (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = %s) as user_liked
+                   (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = %s) as user_liked,
+                   (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
+                   GROUP_CONCAT(DISTINCT t.name ORDER BY t.name SEPARATOR ', ') as tags
             FROM posts p
             JOIN users u ON p.user_id = u.id
+            LEFT JOIN post_tags pt ON p.id = pt.post_id
+            LEFT JOIN tags t ON pt.tag_id = t.id
             WHERE p.is_blocked = FALSE 
             AND u.is_blocked = FALSE
             AND u.id NOT IN (
@@ -124,6 +172,7 @@ def home():
                 UNION
                 SELECT blocker_id FROM user_blocks WHERE blocked_id = %s
             )
+            GROUP BY p.id
             ORDER BY p.created_at DESC
             LIMIT 50
         """
@@ -154,6 +203,36 @@ def home():
         current_user = cursor.fetchone()
         current_user_avatar = current_user["avatar"] if current_user else None
         
+        # Get trending tags (tags used in most posts in last 7 days, randomized)
+        q = """
+            SELECT t.name, COUNT(pt.post_id) as post_count
+            FROM tags t
+            JOIN post_tags pt ON t.id = pt.tag_id
+            JOIN posts p ON pt.post_id = p.id
+            WHERE p.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND p.is_blocked = FALSE
+            GROUP BY t.id, t.name
+            ORDER BY post_count DESC, RAND()
+            LIMIT 5
+        """
+        cursor.execute(q)
+        trending_tags = cursor.fetchall()
+        
+        # If not enough recent tags, get overall trending tags
+        if len(trending_tags) < 3:
+            q = """
+                SELECT t.name, COUNT(pt.post_id) as post_count
+                FROM tags t
+                JOIN post_tags pt ON t.id = pt.tag_id
+                JOIN posts p ON pt.post_id = p.id
+                WHERE p.is_blocked = FALSE
+                GROUP BY t.id, t.name
+                ORDER BY post_count DESC, RAND()
+                LIMIT 5
+            """
+            cursor.execute(q)
+            trending_tags = cursor.fetchall()
+        
         return render_template(
             "home.html",
             posts=posts,
@@ -162,11 +241,13 @@ def home():
             following=following,
             followers=followers,
             current_user_avatar=current_user_avatar,
-            is_admin=is_admin()
+            trending_tags=trending_tags,
+            is_admin=is_admin(),
+            lan=lan
         )
     except Exception as ex:
         ic(ex)
-        return render_template("home.html", posts=[], user_name=user.get("name", ""), error="Error loading feed"), 500
+        return render_template("home.html", posts=[], user_name=user.get("name", ""), error="Error loading feed", lan=lan if 'lan' in locals() else "english"), 500
     finally:
         cleanup_db(cursor if "cursor" in locals() else None, db if "db" in locals() else None)
 
@@ -371,6 +452,7 @@ def create_post():
         
         content = request.form.get("content", "").strip()
         audio_file = request.files.get("audio_file")
+        tags_input = request.form.get("tags", "").strip()
         
         if not content and (not audio_file or not audio_file.filename):
             return json_response({"error": "Please enter content or upload an audio file"}, 400) if is_ajax() else redirect(url_for("home"))
@@ -398,6 +480,30 @@ def create_post():
             VALUES (%s, %s, %s, %s)
         """
         cursor.execute(q, (user_id, content if content else None, media_path, media_type))
+        post_id = cursor.lastrowid
+        
+        # Process tags
+        if tags_input:
+            # Parse tags (comma-separated, remove # if present, trim whitespace)
+            tag_names = [tag.strip().lstrip('#') for tag in tags_input.split(',') if tag.strip()]
+            for tag_name in tag_names:
+                if tag_name and len(tag_name) <= 100:  # Validate tag length
+                    # Get or create tag
+                    q = "SELECT id FROM tags WHERE name = %s"
+                    cursor.execute(q, (tag_name.lower(),))
+                    tag = cursor.fetchone()
+                    
+                    if not tag:
+                        q = "INSERT INTO tags (name) VALUES (%s)"
+                        cursor.execute(q, (tag_name.lower(),))
+                        tag_id = cursor.lastrowid
+                    else:
+                        tag_id = tag["id"]
+                    
+                    # Link tag to post
+                    q = "INSERT IGNORE INTO post_tags (post_id, tag_id) VALUES (%s, %s)"
+                    cursor.execute(q, (post_id, tag_id))
+        
         db.commit()
         
         return json_response({"success": True, "message": "Post created"}) if is_ajax() else redirect(url_for("home"))
@@ -462,9 +568,35 @@ def add_comment(post_id):
         db, cursor = x.db()
         q = "INSERT INTO comments (user_id, post_id, content) VALUES (%s, %s, %s)"
         cursor.execute(q, (user_id, post_id, content))
+        comment_id = cursor.lastrowid
+        
+        # Fetch the newly created comment with user info for AJAX response
+        if is_ajax():
+            q = """
+                SELECT c.id, c.content, c.created_at, u.name as user_name, u.avatar as user_avatar
+                FROM comments c
+                JOIN users u ON c.user_id = u.id
+                WHERE c.id = %s
+            """
+            cursor.execute(q, (comment_id,))
+            comment = cursor.fetchone()
+        
         db.commit()
         
-        return json_response({"success": True, "message": "Comment added"}) if is_ajax() else redirect(url_for("home"))
+        if is_ajax():
+            return json_response({
+                "success": True, 
+                "message": "Comment added",
+                "comment": {
+                    "id": comment["id"],
+                    "content": comment["content"],
+                    "created_at": comment["created_at"].strftime('%b %d') if comment["created_at"] else '',
+                    "user_name": comment["user_name"],
+                    "user_avatar": comment["user_avatar"] or None
+                }
+            })
+        else:
+            return redirect(url_for("home"))
     except Exception as ex:
         ic(ex)
         return json_response({"error": "Failed to add comment"}, 500) if is_ajax() else redirect(url_for("home"))
@@ -489,6 +621,8 @@ def edit_post(post_id):
         content = request.form.get("content", "").strip()
         if content and len(content) > 500:
             content = content[:500]
+        
+        tags_input = request.form.get("tags", "").strip()
         
         media_path = post["media_path"]
         media_type = post["media_type"]
@@ -518,6 +652,33 @@ def edit_post(post_id):
             WHERE id = %s AND user_id = %s
         """
         cursor.execute(q, (content if content else None, media_path, media_type, post_id, user_id))
+        
+        # Update tags
+        # Remove all existing tags for this post
+        q = "DELETE FROM post_tags WHERE post_id = %s"
+        cursor.execute(q, (post_id,))
+        
+        # Add new tags
+        if tags_input:
+            tag_names = [tag.strip().lstrip('#') for tag in tags_input.split(',') if tag.strip()]
+            for tag_name in tag_names:
+                if tag_name and len(tag_name) <= 100:
+                    # Get or create tag
+                    q = "SELECT id FROM tags WHERE name = %s"
+                    cursor.execute(q, (tag_name.lower(),))
+                    tag = cursor.fetchone()
+                    
+                    if not tag:
+                        q = "INSERT INTO tags (name) VALUES (%s)"
+                        cursor.execute(q, (tag_name.lower(),))
+                        tag_id = cursor.lastrowid
+                    else:
+                        tag_id = tag["id"]
+                    
+                    # Link tag to post
+                    q = "INSERT IGNORE INTO post_tags (post_id, tag_id) VALUES (%s, %s)"
+                    cursor.execute(q, (post_id, tag_id))
+        
         db.commit()
         if cursor.rowcount != 1:
             raise Exception("Failed to update post", 400)
@@ -603,12 +764,15 @@ def search():
                 cursor.execute(q, (user_id, user_item["id"]))
                 user_item["is_following"] = cursor.fetchone() is not None
         
+        # Search posts by content OR tags
         q = """
-            SELECT p.id, p.content, p.media_path, p.media_type, p.total_likes, p.created_at, 
+            SELECT DISTINCT p.id, p.content, p.media_path, p.media_type, p.total_likes, p.created_at, 
                    u.name as user_name, u.avatar as user_avatar, u.id as user_id
             FROM posts p
             JOIN users u ON p.user_id = u.id
-            WHERE p.content LIKE %s 
+            LEFT JOIN post_tags pt ON p.id = pt.post_id
+            LEFT JOIN tags t ON pt.tag_id = t.id
+            WHERE (p.content LIKE %s OR t.name LIKE %s)
             AND p.is_blocked = FALSE 
             AND u.is_blocked = FALSE
             AND u.id NOT IN (
@@ -619,7 +783,7 @@ def search():
             ORDER BY p.created_at DESC
             LIMIT 20
         """
-        cursor.execute(q, (search_pattern, user_id, user_id))
+        cursor.execute(q, (search_pattern, search_pattern, user_id, user_id))
         posts = cursor.fetchall()
         
         q = """
@@ -640,6 +804,21 @@ def search():
         cursor.execute(q, (search_pattern, search_pattern, user_id, user_id))
         songs = cursor.fetchall()
         
+        # Search tags
+        q = """
+            SELECT DISTINCT t.id, t.name, COUNT(pt.post_id) as post_count
+            FROM tags t
+            LEFT JOIN post_tags pt ON t.id = pt.tag_id
+            LEFT JOIN posts p ON pt.post_id = p.id
+            WHERE t.name LIKE %s
+            AND (p.id IS NULL OR p.is_blocked = FALSE)
+            GROUP BY t.id, t.name
+            ORDER BY post_count DESC
+            LIMIT 10
+        """
+        cursor.execute(q, (search_pattern,))
+        tags = cursor.fetchall()
+        
         # Return JSON if AJAX request, otherwise render template
         if is_ajax():
             return json_response({
@@ -648,10 +827,11 @@ def search():
                 "users": users,
                 "posts": posts,
                 "songs": songs,
+                "tags": tags,
                 "current_user_id": user_id
             })
         
-        return render_template("search.html", query=query, users=users, posts=posts, songs=songs, current_user_id=user_id)
+        return render_template("search.html", query=query, users=users, posts=posts, songs=songs, tags=tags, current_user_id=user_id)
     except Exception as ex:
         ic(ex)
         if is_ajax():
@@ -692,6 +872,87 @@ def toggle_follow(user_id):
     except Exception as ex:
         ic(ex)
         return redirect(url_for("home"))
+    finally:
+        cleanup_db(cursor if "cursor" in locals() else None, db if "db" in locals() else None)
+
+
+@app.route("/explore")
+def explore():
+    """Explore page - browse posts by tags"""
+    user = get_user()
+    if not user: return redirect(url_for("login"))
+    
+    # Handle language parameter from query string
+    lan = request.args.get('lan', 'english')
+    if lan not in x.allowed_languages: lan = "english"
+    x.default_language = lan
+    
+    tag_name = request.args.get("tag_name", "").strip().lower()
+    
+    try:
+        db, cursor = x.db()
+        user_id = user["id"]
+        
+        if tag_name:
+            # Show posts with specific tag
+            q = """
+                SELECT DISTINCT p.id, p.content, p.media_path, p.media_type, p.total_likes, p.created_at,
+                       u.id as user_id, u.name as user_name, u.avatar as user_avatar, p.user_id as post_owner_id,
+                       (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = %s) as user_liked,
+                       (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
+                       GROUP_CONCAT(DISTINCT t2.name ORDER BY t2.name SEPARATOR ', ') as tags
+                FROM posts p
+                JOIN users u ON p.user_id = u.id
+                JOIN post_tags pt ON p.id = pt.post_id
+                JOIN tags t ON pt.tag_id = t.id
+                LEFT JOIN post_tags pt2 ON p.id = pt2.post_id
+                LEFT JOIN tags t2 ON pt2.tag_id = t2.id
+                WHERE t.name = %s
+                AND p.is_blocked = FALSE 
+                AND u.is_blocked = FALSE
+                AND u.id NOT IN (
+                    SELECT blocked_id FROM user_blocks WHERE blocker_id = %s
+                    UNION
+                    SELECT blocker_id FROM user_blocks WHERE blocked_id = %s
+                )
+                GROUP BY p.id
+                ORDER BY p.created_at DESC
+                LIMIT 50
+            """
+            cursor.execute(q, (user_id, tag_name, user_id, user_id))
+            posts = cursor.fetchall()
+            
+            for post in posts:
+                q = """
+                    SELECT c.id, c.content, c.created_at, u.name as user_name, u.avatar as user_avatar
+                    FROM comments c
+                    JOIN users u ON c.user_id = u.id
+                    WHERE c.post_id = %s
+                    ORDER BY c.created_at ASC
+                """
+                cursor.execute(q, (post["id"],))
+                post["comments"] = cursor.fetchall()
+        else:
+            posts = []
+        
+        # Get all popular tags
+        q = """
+            SELECT t.name, COUNT(pt.post_id) as post_count
+            FROM tags t
+            JOIN post_tags pt ON t.id = pt.tag_id
+            JOIN posts p ON pt.post_id = p.id
+            WHERE p.is_blocked = FALSE
+            GROUP BY t.id, t.name
+            ORDER BY post_count DESC
+            LIMIT 50
+        """
+        cursor.execute(q)
+        all_tags = cursor.fetchall()
+        
+        return render_template("explore.html", posts=posts, tag_name=tag_name, all_tags=all_tags, user_id=user_id, lan=lan)
+    except Exception as ex:
+        ic(ex)
+        return render_template("explore.html", posts=[], tag_name=tag_name, all_tags=[], user_id=user_id, error="Error loading explore page", lan=lan if 'lan' in locals() else "english"), 500
     finally:
         cleanup_db(cursor if "cursor" in locals() else None, db if "db" in locals() else None)
 
@@ -833,6 +1094,11 @@ def profile(profile_user_id=None):
     current_user = get_user()
     if not current_user: return redirect(url_for("login"))
     
+    # Handle language parameter from query string
+    lan = request.args.get('lan', 'english')
+    if lan not in x.allowed_languages: lan = "english"
+    x.default_language = lan
+    
     try:
         db, cursor = x.db()
         current_user_id = current_user["id"]
@@ -888,13 +1154,15 @@ def profile(profile_user_id=None):
         followers = cursor.fetchone()["followers_count"]
         
         q = """
-            SELECT p.id, p.content, p.media_path, p.media_type, p.total_likes, p.created_at
+            SELECT p.id, p.content, p.media_path, p.media_type, p.total_likes, p.created_at,
+                   (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = %s) as user_liked,
+                   (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
             FROM posts p
             WHERE p.user_id = %s AND p.is_blocked = FALSE
             ORDER BY p.created_at DESC
             LIMIT 50
         """
-        cursor.execute(q, (profile_user_id,))
+        cursor.execute(q, (current_user_id, profile_user_id))
         posts = cursor.fetchall()
         
         for post in posts:
@@ -917,7 +1185,8 @@ def profile(profile_user_id=None):
                              is_own_profile=is_own_profile,
                              is_following=is_following,
                              is_blocked_by_viewer=is_blocked_by_viewer,
-                             current_user_id=current_user_id)
+                             current_user_id=current_user_id,
+                             lan=lan)
     except Exception as ex:
         ic(ex)
         return redirect(url_for("home"))

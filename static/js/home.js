@@ -1,3 +1,99 @@
+// Tag autocomplete
+let allTags = [];
+let tagSuggestionsTimeout = null;
+
+// Load all tags on page load
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch('/api/tags');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.tags) {
+                allTags = data.tags;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading tags:', error);
+    }
+    
+    // Setup tag autocomplete for post creation
+    const tagsInput = document.getElementById('tags-input');
+    if (tagsInput) {
+        tagsInput.addEventListener('input', handleTagInput);
+        tagsInput.addEventListener('blur', function() {
+            // Delay hiding suggestions to allow clicking
+            setTimeout(() => {
+                const suggestions = document.getElementById('tag-suggestions');
+                if (suggestions) suggestions.style.display = 'none';
+            }, 200);
+        });
+    }
+});
+
+function handleTagInput(event) {
+    const input = event.target;
+    const value = input.value;
+    const suggestionsDiv = document.getElementById('tag-suggestions');
+    
+    if (!suggestionsDiv) return;
+    
+    // Clear previous timeout
+    if (tagSuggestionsTimeout) {
+        clearTimeout(tagSuggestionsTimeout);
+    }
+    
+    // Get the last tag being typed (after last comma)
+    const parts = value.split(',').map(p => p.trim());
+    const currentTag = parts[parts.length - 1].toLowerCase();
+    
+    if (currentTag.length === 0 || allTags.length === 0) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    
+    // Get already added tags (excluding the current one being typed)
+    const existingTags = parts.slice(0, -1).map(t => t.toLowerCase());
+    
+    // Filter tags that match and aren't already added
+    const matchingTags = allTags.filter(tag => {
+        const tagLower = tag.toLowerCase();
+        return tagLower.startsWith(currentTag) && 
+               !existingTags.includes(tagLower) &&
+               tagLower !== currentTag;
+    }).slice(0, 5);
+    
+    if (matchingTags.length === 0) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    
+    // Show suggestions
+    suggestionsDiv.innerHTML = matchingTags.map(tag => {
+        const beforeComma = parts.slice(0, -1).filter(t => t).join(', ');
+        const prefix = beforeComma ? beforeComma + ', ' : '';
+        return `<div class="tag-suggestion" style="padding: var(--space-2) var(--space-3); cursor: pointer; color: var(--color-text); border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background-color 0.2s;" 
+                onmouseover="this.style.backgroundColor='rgba(249, 115, 22, 0.1)'"
+                onmouseout="this.style.backgroundColor='transparent'"
+                onclick="selectTag('${prefix}${tag}')">#${tag}</div>`;
+    }).join('');
+    
+    suggestionsDiv.style.display = 'block';
+}
+
+function selectTag(fullValue) {
+    const tagsInput = document.getElementById('tags-input');
+    const suggestionsDiv = document.getElementById('tag-suggestions');
+    if (tagsInput) {
+        tagsInput.value = fullValue + ', ';
+        tagsInput.focus();
+        // Trigger input event to show suggestions for next tag
+        tagsInput.dispatchEvent(new Event('input'));
+    }
+    if (suggestionsDiv) {
+        suggestionsDiv.style.display = 'none';
+    }
+}
+
 // Toggle comments section visibility
 function toggleComments(postId) {
     const commentsSection = document.getElementById('comments-' + postId);
@@ -46,13 +142,19 @@ async function toggleLike(postId) {
             const data = await response.json();
             const likeBtn = document.getElementById('like-btn-' + postId);
             const likeCount = document.getElementById('like-count-' + postId);
+            const likeIcon = likeBtn?.querySelector('.like-icon');
             
             if (data.liked) {
                 likeBtn.classList.add('liked');
+                if (likeIcon) likeIcon.textContent = '❤️';
             } else {
                 likeBtn.classList.remove('liked');
+                if (likeIcon) likeIcon.textContent = '🤍';
             }
-            likeCount.textContent = data.total_likes;
+            
+            if (likeCount) {
+                likeCount.textContent = data.total_likes || 0;
+            }
         } else {
             console.error('Failed to toggle like');
         }
@@ -67,6 +169,7 @@ async function addComment(event, postId) {
     const form = event.target;
     const formData = new FormData(form);
     const content = formData.get('content').trim();
+    const input = form.querySelector('input[name="content"]');
     
     if (!content || content.length < 1) {
         alert('Comment cannot be empty');
@@ -78,22 +181,95 @@ async function addComment(event, postId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: new URLSearchParams(formData),
             credentials: 'same-origin'
         });
         
         if (response.ok) {
-            // Reload comments section
-            location.reload();
+            const data = await response.json();
+            if (data.success && data.comment) {
+                // Clear the input
+                if (input) input.value = '';
+                
+                // Get the comments list container
+                const commentsList = document.querySelector(`#comments-${postId} .comments-list`);
+                if (commentsList) {
+                    // Remove "No comments yet" message if it exists
+                    const noCommentsMsg = commentsList.querySelector('p');
+                    if (noCommentsMsg && noCommentsMsg.textContent.includes('No comments yet')) {
+                        noCommentsMsg.remove();
+                    }
+                    
+                    // Create the new comment element
+                    const commentDiv = document.createElement('div');
+                    commentDiv.className = 'comment-item';
+                    
+                    // Format avatar URL
+                    let avatarUrl = data.comment.user_avatar;
+                    if (avatarUrl && !avatarUrl.startsWith('http')) {
+                        avatarUrl = `/static/${avatarUrl}`;
+                    } else if (!avatarUrl) {
+                        avatarUrl = '/static/images/default-avatar.svg';
+                    }
+                    
+                    commentDiv.innerHTML = `
+                        <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
+                            <img src="${avatarUrl}" 
+                                 alt="${data.comment.user_name}" 
+                                 class="avatar-small"
+                                 onerror="this.src='/static/images/default-avatar.svg'">
+                            <div style="flex: 1;">
+                                <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-1);">
+                                    <strong style="color: var(--color-text); font-size: 0.9rem;">${escapeHtml(data.comment.user_name)}</strong>
+                                    <span style="color: var(--color-text-muted); font-size: 0.8rem;">${data.comment.created_at}</span>
+                                </div>
+                                <p style="color: var(--color-text); margin: 0; font-size: 0.9rem;">${escapeHtml(data.comment.content)}</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Append the new comment to the list
+                    commentsList.appendChild(commentDiv);
+                    
+                    // Update comment count by counting actual comments in the list
+                    const commentItems = commentsList.querySelectorAll('.comment-item');
+                    const actualCount = commentItems.length;
+                    
+                    const commentCountSpan = document.getElementById(`comment-count-${postId}`);
+                    const commentBtn = document.getElementById(`comment-btn-${postId}`);
+                    
+                    if (commentCountSpan) {
+                        commentCountSpan.textContent = `(${actualCount})`;
+                    } else if (commentBtn) {
+                        // If count span doesn't exist, create it
+                        const countSpan = document.createElement('span');
+                        countSpan.id = `comment-count-${postId}`;
+                        countSpan.textContent = `(${actualCount})`;
+                        commentBtn.appendChild(document.createTextNode(' '));
+                        commentBtn.appendChild(countSpan);
+                    }
+                }
+            } else {
+                alert(data.error || 'Failed to add comment');
+            }
         } else {
-            alert('Failed to add comment');
+            const data = await response.json().catch(() => ({}));
+            alert(data.error || 'Failed to add comment');
         }
     } catch (error) {
         console.error('Error adding comment:', error);
         alert('Error adding comment');
     }
     return false;
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Delete post using AJAX
@@ -254,6 +430,22 @@ function displayLiveSearchResults(data, query) {
                             </button>
                         </form>
                     ` : ''}
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+
+    if (data.tags && data.tags.length > 0) {
+        hasResults = true;
+        html += '<div class="live-search-section"><h3 style="color: var(--color-text); margin: var(--space-4) 0 var(--space-3) 0; font-size: 1rem;">Tags</h3>';
+        data.tags.forEach(tag => {
+            html += `
+                <div class="live-search-item">
+                    <div style="flex: 1;">
+                        <a href="/explore?tag=${encodeURIComponent(tag.name)}" style="color: var(--color-accent); text-decoration: none; font-weight: 600; display: block; font-size: 0.95rem;">#${escapeHtml(tag.name)}</a>
+                        <p style="color: var(--color-text-muted); font-size: 0.85rem; margin: 0;">${tag.post_count || 0} posts</p>
+                    </div>
                 </div>
             `;
         });

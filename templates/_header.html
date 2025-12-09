@@ -9,7 +9,7 @@
         <div class="nav-links">
             {% if session.get('user') or session.get('user_id') %}
                 <a href="{{ url_for('home') }}" class="nav-link {% if request.endpoint == 'home' %}active{% endif %}">Home</a>
-                <a href="#" class="nav-link">Explore</a>
+                <a href="{{ url_for('explore') }}" class="nav-link {% if request.endpoint == 'explore' %}active{% endif %}">Explore</a>
                 <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">Profile</a>
                 {% if is_admin %}
                 <a href="{{ url_for('admin_panel') }}" class="nav-link {% if request.endpoint == 'admin_panel' %}active{% endif %}">Admin</a>
@@ -26,6 +26,18 @@
         </div>
         <div class="nav-user">
             {% if session.get('user') or session.get('user_id') %}
+                <!-- Language Selector -->
+                <div class="language-selector" style="display: flex; gap: 0.25rem; margin-right: var(--space-3); align-items: center;">
+                    <a href="{{ get_language_url('english') }}" 
+                       class="lang-btn {% if current_language == 'english' %}active{% endif %}" 
+                       style="padding: var(--space-1) var(--space-2); font-size: 0.75rem; text-decoration: none; border-radius: var(--radius-sm); transition: var(--transition); {% if current_language == 'english' %}background-color: var(--color-accent); color: white;{% else %}background-color: var(--color-bg-secondary); color: var(--color-text-muted);{% endif %}">EN</a>
+                    <a href="{{ get_language_url('danish') }}" 
+                       class="lang-btn {% if current_language == 'danish' %}active{% endif %}" 
+                       style="padding: var(--space-1) var(--space-2); font-size: 0.75rem; text-decoration: none; border-radius: var(--radius-sm); transition: var(--transition); {% if current_language == 'danish' %}background-color: var(--color-accent); color: white;{% else %}background-color: var(--color-bg-secondary); color: var(--color-text-muted);{% endif %}">DA</a>
+                    <a href="{{ get_language_url('spanish') }}" 
+                       class="lang-btn {% if current_language == 'spanish' %}active{% endif %}" 
+                       style="padding: var(--space-1) var(--space-2); font-size: 0.75rem; text-decoration: none; border-radius: var(--radius-sm); transition: var(--transition); {% if current_language == 'spanish' %}background-color: var(--color-accent); color: white;{% else %}background-color: var(--color-bg-secondary); color: var(--color-text-muted);{% endif %}">ES</a>
+                </div>
                 {% set current_user_name = user_name if user_name is defined else (user.name if user is defined and user.name else session.get('user_name', '')) %}
                 <a href="{{ url_for('profile') }}" class="user-name">{{ current_user_name }}</a>
                 <a href="{{ url_for('logout') }}" class="btn btn-small btn-logout">Logout</a>

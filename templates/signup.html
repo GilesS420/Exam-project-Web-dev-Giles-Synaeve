@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Sign Up - EchoVerse</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    {% if not (session.get('user') or session.get('user_id')) %}
+    <link rel="prefetch" href="{{ url_for('login') }}">
+    <link rel="prefetch" href="{{ url_for('landing_page') }}">
+    {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
     <link rel="stylesheet" href="/static/css/landing.css">
 </head>

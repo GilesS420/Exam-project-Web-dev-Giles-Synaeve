@@ -61,6 +61,27 @@ body {
     gap: var(--space-4);
 }
 
+.language-selector {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.lang-btn {
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.75rem;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lang-btn:hover {
+    background-color: var(--color-accent) !important;
+    color: white !important;
+    transform: scale(1.05);
+}
+
 .user-name {
     color: var(--color-text);
     text-decoration: none;
@@ -92,12 +113,12 @@ body {
 
 /* Container Layout */
 .container {
-    max-width: 1400px;
+    max-width: 100%;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 320px 1fr 380px;
+    grid-template-columns: 320px minmax(800px, 1fr) 380px;
     gap: var(--space-6);
-    padding: var(--space-6);
+    padding: var(--space-6) var(--space-2);
 }
 
 /* Sidebars */
@@ -163,6 +184,9 @@ body {
 }
 
 .trending-item {
+    display: block;
+    color: var(--color-text);
+    text-decoration: none;
     padding: var(--space-4);
     background-color: var(--color-bg);
     border-radius: var(--radius-md);
@@ -180,9 +204,55 @@ body {
     transform: translateX(4px);
 }
 
+/* Post Tags */
+.post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.tag-link {
+    display: inline-block;
+    padding: var(--space-1) var(--space-3);
+    background-color: var(--color-bg-secondary);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    border-radius: var(--radius-sm);
+    color: var(--color-accent);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.tag-link:hover {
+    background-color: rgba(249, 115, 22, 0.15);
+    border-color: var(--color-accent);
+    transform: translateY(-1px);
+}
+
+/* Tag Suggestions Dropdown */
+.tag-suggestion {
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+    color: var(--color-text);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s;
+}
+
+.tag-suggestion:hover {
+    background-color: rgba(249, 115, 22, 0.1);
+}
+
+.tag-suggestion:last-child {
+    border-bottom: none;
+}
+
 /* Main Feed */
 .feed {
     min-width: 0; /* Prevents grid overflow */
+    width: 100%;
+    max-width: 100%;
 }
 
 /* Post Composer */
@@ -225,7 +295,9 @@ body {
 .composer-actions {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: var(--space-3);
+    flex-wrap: nowrap;
 }
 
 .file-upload-btn {
@@ -236,6 +308,22 @@ body {
     color: var(--color-text);
     cursor: pointer;
     transition: var(--transition);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.composer-actions > div {
+    flex: 1;
+    min-width: 150px;
+    max-width: calc(100% - 300px);
+    position: relative;
+}
+
+.composer-actions .btn-primary {
+    flex-shrink: 0;
+    white-space: nowrap;
+    align-self: flex-start;
+    margin-left: var(--space-2);
 }
 
 .file-upload-btn:hover {
@@ -305,6 +393,9 @@ body {
     border-radius: var(--radius-md);
     padding: var(--space-5);
     transition: var(--transition);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .post-card:hover {
@@ -388,6 +479,11 @@ body {
 
 .action-btn.liked {
     color: var(--color-error);
+    background-color: rgba(239, 68, 68, 0.15);
+}
+
+.action-btn.liked .like-icon {
+    filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.5));
 }
 
 .action-btn.delete-btn {

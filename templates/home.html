@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - EchoVerse</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    {% if session.get('user') or session.get('user_id') %}
+    <link rel="prefetch" href="{{ url_for('explore') }}">
+    <link rel="prefetch" href="{{ url_for('profile') }}">
+    {% if is_admin %}
+    <link rel="prefetch" href="{{ url_for('admin_panel') }}">
+    {% endif %}
+    {% endif %}
     <link rel="stylesheet" href="/static/css/variables.css">
     <link rel="stylesheet" href="/static/css/home.css">
 </head>
@@ -14,16 +22,10 @@
         <!-- Left Sidebar -->
         <aside class="sidebar-left">
             <div class="sidebar-section">
-                <h3>Your Stats</h3>
+                <h3>{{ x.lans("your_stats") if x.lans else "Your Stats" }}</h3>
                 <div class="stats">
-                    <div class="stat-item">
-                        <span class="stat-value">{{ following }}</span>
-                        <span class="stat-label">Following</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value">{{ followers }}</span>
-                        <span class="stat-label">Followers</span>
-                    </div>
+                    {% set stat_value = following %}{% set stat_label = x.lans("following") if x.lans else "Following" %}{% include "_stat_item.html" %}
+                    {% set stat_value = followers %}{% set stat_label = x.lans("followers") if x.lans else "Followers" %}{% include "_stat_item.html" %}
                 </div>
             </div>
         </aside>
@@ -34,18 +36,21 @@
             <div class="post-composer">
                 <form method="POST" action="{{ url_for('create_post') }}" enctype="multipart/form-data" class="composer-form" id="post-form">
                     <div class="composer-header">
-                        <img src="{% if current_user_avatar %}{% if current_user_avatar.startswith('http') %}{{ current_user_avatar }}{% else %}{{ url_for('static', filename=current_user_avatar) }}{% endif %}{% else %}{{ url_for('static', filename='images/default-avatar.svg') }}{% endif %}" 
-                             alt="Avatar" 
-                             class="avatar-small" 
-                             onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
-                        <textarea name="content" placeholder="Share your sound..." rows="3" class="composer-input" maxlength="500" id="post-content"></textarea>
+                        {% set avatar_url = current_user_avatar %}{% set alt_text = 'Avatar' %}{% set avatar_class = 'avatar-small' %}{% include "__avatar.html" %}
+                        <textarea name="content" placeholder="{{ x.lans('share_your_sound') if x.lans else 'Share your sound...' }}" rows="3" class="composer-input" maxlength="500" id="post-content"></textarea>
                     </div>
                     <div class="composer-actions">
                         <label class="file-upload-btn">
                             <input type="file" name="audio_file" accept="audio/*" style="display: none;" id="audio-file-input">
-                            🎵 Upload Audio
+                            🎵 {{ x.lans("upload_audio") if x.lans else "Upload Audio" }}
                         </label>
-                        <button type="submit" class="btn btn-primary">Post</button>
+                        <div style="flex: 1; position: relative; min-width: 200px; max-width: calc(100% - 300px);">
+                            <input type="text" name="tags" id="tags-input" placeholder="{{ x.lans('tags_placeholder') if x.lans else 'Tags (comma-separated: music, beats, new)' }}" 
+                                   style="width: 100%; padding: var(--space-3); background-color: var(--color-bg-secondary); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-sm); color: var(--color-text); font-size: 0.9rem;"
+                                   maxlength="200" autocomplete="off">
+                            <div id="tag-suggestions" style="display: none; position: absolute; top: calc(100% + 2px); left: 0; width: 100%; background: var(--color-bg-secondary); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-sm); max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="flex-shrink: 0;">{{ x.lans("post_button") if x.lans else "Post" }}</button>
                     </div>
                     <div id="post-error" style="color: var(--color-error); margin-top: var(--space-2); display: none;"></div>
                 </form>
@@ -58,119 +63,14 @@
                 {% endif %}
                 
                 {% if posts %}
-                    {% for post in posts %}
-                    <article class="post-card" id="post-{{ post.id }}">
-                        <div class="post-header">
-                            <img src="{% if post.user_avatar %}{% if post.user_avatar.startswith('http') %}{{ post.user_avatar }}{% else %}{{ url_for('static', filename=post.user_avatar) }}{% endif %}{% else %}{{ url_for('static', filename='images/default-avatar.svg') }}{% endif %}" 
-                                 alt="{{ post.user_name }}" 
-                                 class="avatar"
-                                 onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
-                            <div class="post-author">
-                                <a href="{{ url_for('profile', profile_user_id=post.user_id) }}" class="author-name">{{ post.user_name }}</a>
-                                <span class="post-time">{{ post.created_at.strftime('%b %d, %Y') if post.created_at else '' }}</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Post View Mode -->
-                        <div class="post-view" id="post-view-{{ post.id }}">
-                            {% if post.content %}
-                            <div class="post-content">
-                                {{ post.content }}
-                            </div>
-                            {% endif %}
-                            
-                            {% if post.media_type == 'audio' and post.media_path %}
-                            <div class="post-audio">
-                                <audio controls class="audio-player">
-                                    <source src="{{ url_for('static', filename='uploads/' + post.media_path) }}" type="audio/mpeg">
-                                    Your browser does not support the audio element.
-                                </audio>
-                            </div>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Post Edit Mode (hidden by default) -->
-                        {% if post.post_owner_id == user_id %}
-                        <div class="post-edit" id="post-edit-{{ post.id }}" style="display: none;">
-                            <form method="POST" action="{{ url_for('edit_post', post_id=post.id) }}" enctype="multipart/form-data" class="inline-edit-form">
-                                <textarea name="content" rows="3" class="inline-edit-input" placeholder="Share your sound...">{{ post.content or '' }}</textarea>
-                                
-                                {% if post.media_type == 'audio' and post.media_path %}
-                                <div style="margin: var(--space-3) 0;">
-                                    <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: var(--space-2);">Current audio:</p>
-                                    <audio controls class="audio-player" style="width: 100%;">
-                                        <source src="{{ url_for('static', filename='uploads/' + post.media_path) }}" type="audio/mpeg">
-                                    </audio>
-                                    <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: var(--space-2);">
-                                        Upload new file to replace, or leave empty to keep current audio.
-                                    </p>
-                                </div>
-                                {% endif %}
-                                
-                                <label class="file-upload-label" style="margin: var(--space-3) 0;">
-                                    <input type="file" name="audio_file" accept="audio/*" style="display: none;">
-                                    <span class="file-upload-text">🎵 {% if post.media_type == 'audio' %}Replace Audio{% else %}Upload Audio{% endif %}</span>
-                                </label>
-                                
-                                <div class="inline-edit-actions">
-                                    <button type="submit" class="btn btn-primary btn-small">Save</button>
-                                    <button type="button" class="btn btn-small" onclick="cancelEdit({{ post.id }})">Cancel</button>
-                                </div>
-                            </form>
-                        </div>
-                        {% endif %}
-                        
-                        <div class="post-actions">
-                            <button type="button" class="action-btn {% if post.user_liked %}liked{% endif %}" onclick="toggleLike({{ post.id }})" id="like-btn-{{ post.id }}">
-                                 ❤️ <span id="like-count-{{ post.id }}">{{ post.total_likes or 0 }}</span>
-                            </button>
-                            <button class="action-btn" onclick="toggleComments({{ post.id }})">
-                                Comment
-                            </button>
-                            <button class="action-btn">
-                                 Repost
-                            </button>
-                            {% if post.post_owner_id == user_id %}
-                            <button class="action-btn" onclick="toggleEdit({{ post.id }})">✏️ Edit</button>
-                            <button type="button" class="action-btn delete-btn" onclick="deletePost({{ post.id }})">🗑️ Delete</button>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Comments Section (hidden by default) -->
-                        <div class="comments-section" id="comments-{{ post.id }}" style="display: none;">
-                            <form class="comment-form" id="comment-form-{{ post.id }}" onsubmit="return addComment(event, {{ post.id }})">
-                                <input type="text" name="content" placeholder="Write a comment..." class="comment-input" required maxlength="500" minlength="1">
-                                <button type="submit" class="btn btn-small">Post</button>
-                            </form>
-                            <div class="comments-list">
-                                {% if post.comments %}
-                                    {% for comment in post.comments %}
-                                    <div class="comment-item">
-                                        <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
-                                            <img src="{% if comment.user_avatar %}{% if comment.user_avatar.startswith('http') %}{{ comment.user_avatar }}{% else %}{{ url_for('static', filename=comment.user_avatar) }}{% endif %}{% else %}{{ url_for('static', filename='images/default-avatar.svg') }}{% endif %}" 
-                                                 alt="{{ comment.user_name }}" 
-                                                 class="avatar-small"
-                                                 onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
-                                            <div style="flex: 1;">
-                                                <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-1);">
-                                                    <strong style="color: var(--color-text); font-size: 0.9rem;">{{ comment.user_name }}</strong>
-                                                    <span style="color: var(--color-text-muted); font-size: 0.8rem;">{{ comment.created_at.strftime('%b %d') if comment.created_at else '' }}</span>
-                                                </div>
-                                                <p style="color: var(--color-text); margin: 0; font-size: 0.9rem;">{{ comment.content }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <p style="color: var(--color-text-muted); font-size: 0.9rem; padding: var(--space-3);">No comments yet. Be the first to comment!</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </article>
+                    {% for post_item in posts %}
+                        {% set post = post_item %}
+                        {% set show_edit = True %}
+                        {% include "_post_card.html" %}
                     {% endfor %}
                 {% else %}
                     <div class="empty-feed">
-                        <p>No posts yet. Be the first to share your sound!</p>
+                        <p>{{ x.lans("no_posts_yet") if x.lans else "No posts yet. Be the first to share your sound!" }}</p>
                     </div>
                 {% endif %}
             </div>
@@ -180,9 +80,9 @@
         <aside class="sidebar-right">
             <!-- Search Bar -->
             <div class="sidebar-section">
-                <h3>Search</h3>
+                <h3>{{ x.lans("search") if x.lans else "Search" }}</h3>
                 <form class="search-form" id="search-form" onsubmit="return false;">
-                    <input type="text" name="q" id="search-input" placeholder="Search users, posts..." class="search-input" 
+                    <input type="text" name="q" id="search-input" placeholder="{{ x.lans('search_placeholder') if x.lans else 'Search users, posts...' }}" class="search-input" 
                            oninput="handleLiveSearch(this.value)">
                     <button type="button" class="search-btn" onclick="clearSearch()">✕</button>
                 </form>
@@ -194,11 +94,15 @@
             </div>
 
             <div class="sidebar-section">
-                <h3>Trending</h3>
+                <h3>{{ x.lans("trending") if x.lans else "Trending" }}</h3>
                 <div class="trending-list">
-                    <div class="trending-item">#NewMusic</div>
-                    <div class="trending-item">#Beats</div>
-                    <div class="trending-item">#SoundCloud</div>
+                    {% if trending_tags %}
+                        {% for tag in trending_tags %}
+                        <a href="{{ url_for('explore', tag_name=tag.name) }}" class="trending-item">#{{ tag.name }}</a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="trending-item">{{ x.lans("no_trending_tags") if x.lans else "No trending tags yet" }}</div>
+                    {% endif %}
                 </div>
             </div>
         </aside>

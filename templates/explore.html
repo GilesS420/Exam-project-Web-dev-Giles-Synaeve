@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore - EchoVerse</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    {% if session.get('user') or session.get('user_id') %}
+    <link rel="prefetch" href="{{ url_for('home') }}">
+    <link rel="prefetch" href="{{ url_for('profile') }}">
+    {% if is_admin %}
+    <link rel="prefetch" href="{{ url_for('admin_panel') }}">
+    {% endif %}
+    {% endif %}
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/home.css">
+</head>
+<body>
+    {% include "_header.html" %}
+
+    <div class="container" style="flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: var(--space-6) var(--space-4);">
+        <main class="feed" style="max-width: 1000px; width: 100%;">
+            <div style="margin-bottom: var(--space-6); text-align: center;">
+                <h1 style="font-size: 2.5rem; margin-bottom: var(--space-4);">Explore</h1>
+                {% if tag_name %}
+                    <p style="color: var(--color-text-muted); font-size: 1.1rem;">
+                        Posts tagged with <strong style="color: var(--color-accent);">#{{ tag_name }}</strong>
+                        <a href="{{ url_for('explore') }}" style="margin-left: var(--space-3); color: var(--color-accent); text-decoration: none;">View all tags</a>
+                    </p>
+                {% else %}
+                    <p style="color: var(--color-text-muted); font-size: 1.1rem;">Browse posts by tags</p>
+                {% endif %}
+            </div>
+
+            {% if tag_name %}
+                <!-- Posts with selected tag -->
+                <div class="posts-feed">
+                    {% if posts %}
+                        {% for post_item in posts %}
+                            {% set post = post_item %}
+                            {% set show_edit = True %}
+                            {% set user_id = user_id %}
+                            {% include "_post_card.html" %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-feed" style="text-align: center;">
+                            <p>No posts found with tag #{{ tag_name }}. <a href="{{ url_for('explore') }}">Explore other tags</a></p>
+                        </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <!-- All tags -->
+                <div style="margin-bottom: var(--space-6);">
+                    <h2 style="font-size: 1.8rem; margin-bottom: var(--space-4); text-align: center;">Popular Tags</h2>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center;">
+                        {% if all_tags %}
+                            {% for tag in all_tags %}
+                            <a href="{{ url_for('explore', tag_name=tag.name) }}" 
+                               style="display: inline-block; padding: var(--space-3) var(--space-5); background-color: var(--color-bg-secondary); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-md); color: var(--color-text); text-decoration: none; transition: var(--transition); font-weight: 500;">
+                                #{{ tag.name }} <span style="color: var(--color-text-muted); font-size: 0.9rem;">({{ tag.post_count }})</span>
+                            </a>
+                            {% endfor %}
+                        {% else %}
+                            <p style="color: var(--color-text-muted); text-align: center; width: 100%;">No tags yet. Start tagging your posts!</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </main>
+    </div>
+
+    {% include "_footer.html" %}
+    <script src="/static/js/home.js"></script>
+</body>
+</html>
+
