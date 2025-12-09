@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Status Update - EchoVerse</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/email.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Account Status Update</h1>
+        <p>Hello {{ user_name }},</p>
+        
+        {% if action == "blocked" %}
+        <div class="status-blocked">
+            <h2>Your account has been blocked</h2>
+            <p>We regret to inform you that your EchoVerse account has been blocked due to a violation of our terms of service.</p>
+            <p>If you believe this is an error or would like to appeal this decision, please contact our support team.</p>
+        </div>
+        {% else %}
+        <div class="status-unblocked">
+            <h2>Your account has been unblocked</h2>
+            <p>Good news! Your EchoVerse account has been unblocked and you can now access all features again.</p>
+            <p>Welcome back to EchoVerse!</p>
+        </div>
+        {% endif %}
+        
+        <p class="text-muted" style="margin-top: 30px;">
+            If you have any questions or concerns, please don't hesitate to contact our support team.
+        </p>
+        
+        <div class="footer">
+            <p>© EchoVerse - Share Your Sound</p>
+        </div>
+    </div>
+</body>
+</html>
+

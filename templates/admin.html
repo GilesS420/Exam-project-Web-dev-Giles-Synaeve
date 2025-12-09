@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - EchoVerse</title>
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/home.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    {% include "_header.html" %}
+
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Admin Panel</h1>
+            <p style="color: var(--color-text-muted);">Manage users, posts, and system settings</p>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="showSection('users')">Users</button>
+            <button class="admin-tab" onclick="showSection('posts')">Posts</button>
+            <button class="admin-tab" onclick="showSection('languages')">Languages</button>
+        </div>
+
+        <div class="admin-sections-wrapper">
+            <!-- Users Section -->
+            <div id="users-section" class="admin-section active">
+                <div class="admin-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <span class="badge {% if user.role == 'admin' %}badge-admin{% else %}badge-user{% endif %}">
+                                    {{ user.role }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if user.is_verified %}
+                                    <span class="badge badge-verified">Verified</span>
+                                {% else %}
+                                    <span class="badge badge-user">Unverified</span>
+                                {% endif %}
+                                {% if user.is_blocked %}
+                                    <span class="badge badge-blocked">Blocked</span>
+                                {% else %}
+                                    <span class="badge badge-active">Active</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+                            <td>
+                                <button 
+                                    class="btn-block {% if user.is_blocked %}unblock{% else %}block{% endif %}"
+                                    onclick="toggleUserBlock({{ user.id }}, {% if user.is_blocked %}true{% else %}false{% endif %})">
+                                    {% if user.is_blocked %}Unblock{% else %}Block{% endif %}
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+            <!-- Posts Section -->
+            <div id="posts-section" class="admin-section">
+                <div class="admin-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Content</th>
+                            <th>User</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for post in posts %}
+                        <tr>
+                            <td>{{ post.id }}</td>
+                            <td class="post-content-preview">{{ post.content[:50] if post.content else 'No content' }}...</td>
+                            <td>{{ post.user_name }} ({{ post.user_email }})</td>
+                            <td>
+                                {% if post.is_blocked %}
+                                    <span class="badge badge-blocked">Blocked</span>
+                                {% else %}
+                                    <span class="badge badge-active">Active</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ post.created_at.strftime('%Y-%m-%d') if post.created_at else 'N/A' }}</td>
+                            <td>
+                                <button 
+                                    class="btn-block {% if post.is_blocked %}unblock{% else %}block{% endif %}"
+                                    onclick="togglePostBlock({{ post.id }}, {% if post.is_blocked %}true{% else %}false{% endif %})">
+                                    {% if post.is_blocked %}Unblock{% else %}Block{% endif %}
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+            <!-- Languages Section -->
+            <div id="languages-section" class="admin-section">
+                <div class="languages-section">
+                    <h2>System Languages</h2>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <button class="btn-refresh" onclick="loadLanguages()">View from Google Sheets</button>
+                    <button class="btn-refresh" onclick="loadDictionary()" style="background: var(--color-accent-alt);">View dictionary.json</button>
+                    <button class="btn-refresh" onclick="syncLanguages()" style="background: var(--color-success);">Sync to dictionary.json</button>
+                </div>
+                    <div id="languages-display" class="languages-display">
+                        <p style="color: var(--color-text-muted);">Click "View from Google Sheets" to preview, "View dictionary.json" to see all current keys, or "Sync to dictionary.json" to update the file</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include "_footer.html" %}
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>
+

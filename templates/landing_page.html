@@ -9,13 +9,7 @@
 </head>
 <body>
 
-    <nav class="nav">
-        <div class="logo">EchoVerse</div>
-        <div class="nav-links">
-            <a class="btn" href='{{ url_for('login') }}'">Login</a>
-            <a class="btn btn-primary" href='{{ url_for('signup') }}'">Sign Up</a>
-        </div>
-    </nav>
+    {% include "_header.html" %}
 
     <section class="hero">
         <h1>Share Your Sound</h1>
@@ -34,5 +28,6 @@
         </div>
     </section>
 
+    {% include "_footer.html" %}
 </body>
 </html>

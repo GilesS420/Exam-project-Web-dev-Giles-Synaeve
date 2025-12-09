@@ -7,26 +7,27 @@
     <link rel="stylesheet" href="/static/css/landing.css">
 </head>
 <body>
-    <nav class="nav">
-        <div class="logo">EchoVerse</div>
-        <div class="nav-links">
-            <a class="btn" href='{{ url_for('login') }}'">Login</a>
-            <a class="btn btn-primary" href='{{ url_for('signup') }}'">Sign Up</a>
-        </div>
-    </nav>
+    {% include "_header.html" %}
 
     <section class="hero">
         <h1>Welcome back</h1>
         {% if error %}
-            <p style="color: #ff6b6b; margin-bottom: 1rem;">{{ error }}</p>
+            <p style="color: var(--color-error); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); background-color: rgba(239, 68, 68, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(239, 68, 68, 0.3); width: 100%; max-width: 500px; box-sizing: border-box;">{{ error }}</p>
         {% endif %}
-        <form method="post" style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 400px; width: 100%;">
-            <input type="email" name="email" placeholder="Email" value="{{ email or '' }}" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit" class="btn btn-primary big-btn">Login</button>
-            <a href="{{ url_for('forgot_password') }}" style="text-align: center; color: var(--color-accent); text-decoration: none; font-size: 0.9rem; margin-top: 0.5rem;">Forgot Password?</a>
+        <form method="post" action="{{ url_for('login', lan=lan) if lan else url_for('login') }}">
+            <input type="text" name="user_email" placeholder="{{ x.lans('email') if x.lans else 'Email' }}" 
+                   value="{{ email or '' }}" required 
+                   pattern="{{ x.REGEX_EMAIL }}">
+            <input type="password" name="user_password" placeholder="{{ x.lans('password') if x.lans else 'Password' }}" 
+                   required 
+                   minlength="{{ x.USER_PASSWORD_MIN }}" 
+                   maxlength="{{ x.USER_PASSWORD_MAX }}">
+            <button type="submit" class="btn btn-primary big-btn">{{ x.lans("login") if x.lans else "Login" }}</button>
+            <a href="{{ url_for('forgot_password') }}" style="text-align: center; color: var(--color-accent); text-decoration: none; font-size: 1rem; margin-top: var(--space-2); display: block;">Forgot Password?</a>
         </form>
     </section>
+
+    {% include "_footer.html" %}
 </body>
 </html>
 

@@ -7,30 +7,22 @@
     <link rel="stylesheet" href="/static/css/landing.css">
 </head>
 <body>
-    <nav class="nav">
-        <div class="logo">EchoVerse</div>
-        <div class="nav-links">
-            <a class="btn" href="{{ url_for('login') }}">Login</a>
-            {% if not success %}
-            <a class="btn btn-primary" href="{{ url_for('signup') }}">Sign Up</a>
-            {% endif %}
-        </div>
-    </nav>
+    {% include "_header.html" %}
 
     <section class="hero">
         {% if success %}
         <h1>✓ Email Verified!</h1>
-        <p style="font-size: 1.1rem; margin-bottom: 2rem; color: #27ae60;">
+        <p style="font-size: 1.2rem; margin-bottom: var(--space-6); color: var(--color-success); padding: var(--space-4); background-color: rgba(16, 185, 129, 0.1); border-radius: var(--radius-md); border: 1px solid rgba(16, 185, 129, 0.3);">
             {{ message }}
         </p>
         <a href="{{ url_for('login') }}" class="btn btn-primary big-btn">Go to Login</a>
         {% else %}
         {% if email and ("sent a verification email" in message or "sent a password reset email" in message or "sent a password change" in message or "sent" in message) %}
         <h1>Check Your Email</h1>
-        <p style="font-size: 1.1rem; margin-bottom: 1rem;">
+        <p style="font-size: 1.2rem; margin-bottom: var(--space-4); color: var(--color-text);">
             {{ message }}
         </p>
-        <p style="color: #666; margin-bottom: 2rem;">
+        <p style="color: var(--color-text-muted); margin-bottom: var(--space-6); font-size: 1rem; line-height: 1.6;">
             {% if email_type == "password_reset" or email_type == "password_change" %}
             The reset link will expire in 1 hour. Didn't receive the email? Check your spam folder.
             {% elif email_type == "email_change" %}
@@ -39,16 +31,18 @@
             The verification link will expire in 24 hours. Didn't receive the email? Check your spam folder.
             {% endif %}
         </p>
-        <a href="{{ url_for('login') }}" class="btn btn-primary">Go to Login</a>
-        {% if email_type == "password_change" or email_type == "email_change" %}
-        <a href="{{ url_for('profile') }}" class="btn" style="margin-left: 1rem;">Back to Profile</a>
-        {% endif %}
+        <div style="display: flex; gap: var(--space-4); justify-content: center; flex-wrap: wrap; width: 100%;">
+            <a href="{{ url_for('login') }}" class="btn btn-primary big-btn" style="flex: 1; min-width: 200px;">Go to Login</a>
+            {% if email_type == "password_change" or email_type == "email_change" %}
+            <a href="{{ url_for('profile') }}" class="btn big-btn" style="flex: 1; min-width: 200px;">Back to Profile</a>
+            {% endif %}
+        </div>
         {% else %}
         <h1>Verification Failed</h1>
-        <p style="font-size: 1.1rem; margin-bottom: 1rem; color: #e74c3c;">
+        <p style="font-size: 1.2rem; margin-bottom: var(--space-4); color: var(--color-error); padding: var(--space-4); background-color: rgba(239, 68, 68, 0.1); border-radius: var(--radius-md); border: 1px solid rgba(239, 68, 68, 0.3);">
             {{ message }}
         </p>
-        <p style="color: #666; margin-bottom: 2rem;">
+        <p style="color: var(--color-text-muted); margin-bottom: var(--space-6); font-size: 1rem; line-height: 1.6;">
             The verification link may have expired or already been used. 
             Please check your email for a new verification link or sign up again.
         </p>
@@ -56,6 +50,8 @@
         {% endif %}
         {% endif %}
     </section>
+
+    {% include "_footer.html" %}
 </body>
 </html>
 

@@ -1,0 +1,39 @@
+<!-- Navigation Header -->
+<nav class="nav">
+    <div class="nav-container">
+        <div class="logo">
+            <a href="{{ url_for('home') if session.get('user') or session.get('user_id') else url_for('login') }}" style="text-decoration: none; color: inherit;">
+                EchoVerse
+            </a>
+        </div>
+        <div class="nav-links">
+            {% if session.get('user') or session.get('user_id') %}
+                <a href="{{ url_for('home') }}" class="nav-link {% if request.endpoint == 'home' %}active{% endif %}">Home</a>
+                <a href="#" class="nav-link">Explore</a>
+                <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">Profile</a>
+                {% if is_admin %}
+                <a href="{{ url_for('admin_panel') }}" class="nav-link {% if request.endpoint == 'admin_panel' %}active{% endif %}">Admin</a>
+                {% endif %}
+            {% else %}
+                <a href="{{ url_for('login') }}" class="nav-link {% if request.endpoint == 'login' %}active{% endif %}">Login</a>
+                <a href="{{ url_for('signup') }}" class="nav-link {% if request.endpoint == 'signup' %}active{% endif %}">Sign Up</a>
+                <div style="display: flex; gap: 0.5rem; margin-left: 1rem;">
+                    <a href="{{ url_for('login', lan='english') }}" class="btn btn-small" style="font-size: 0.8rem;">EN</a>
+                    <a href="{{ url_for('login', lan='danish') }}" class="btn btn-small" style="font-size: 0.8rem;">DA</a>
+                    <a href="{{ url_for('login', lan='spanish') }}" class="btn btn-small" style="font-size: 0.8rem;">ES</a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="nav-user">
+            {% if session.get('user') or session.get('user_id') %}
+                {% set current_user_name = user_name if user_name is defined else (user.name if user is defined and user.name else session.get('user_name', '')) %}
+                <a href="{{ url_for('profile') }}" class="user-name">{{ current_user_name }}</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-small btn-logout">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn">Login</a>
+                <a href="{{ url_for('signup') }}" class="btn btn-primary">Sign Up</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+

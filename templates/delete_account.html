@@ -5,51 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Delete Account - EchoVerse</title>
     <link rel="stylesheet" href="/static/css/variables.css">
-    <link rel="stylesheet" href="/static/css/home.css">
+    <link rel="stylesheet" href="/static/css/landing.css">
 </head>
 <body>
-    <nav class="nav">
-        <div class="nav-container">
-            <div class="logo">EchoVerse</div>
-            <div class="nav-links">
-                <a href="{{ url_for('home') }}" class="nav-link">Home</a>
-                <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
-            </div>
-            <div class="nav-user">
-                <a href="{{ url_for('profile') }}" class="user-name">{{ session.get('user_name', '') }}</a>
-                <a href="{{ url_for('logout') }}" class="btn btn-small">Logout</a>
-            </div>
-        </div>
-    </nav>
+    {% include "_header.html" %}
 
-    <div class="container">
-        <main class="feed" style="max-width: 600px; margin: 0 auto;">
-            <div class="profile-section" style="border: 2px solid var(--color-error);">
-                <h2 style="color: var(--color-error);">⚠️ Delete Account</h2>
-                {% if error %}
-                <p style="color: var(--color-error); margin-bottom: var(--space-4);">{{ error }}</p>
-                {% endif %}
-                <div style="background-color: rgba(239, 68, 68, 0.1); padding: var(--space-4); border-radius: var(--radius-sm); margin-bottom: var(--space-4);">
-                    <p style="color: var(--color-text); margin-bottom: var(--space-2);"><strong>Warning: This action cannot be undone!</strong></p>
-                    <p style="color: var(--color-text-muted); font-size: 0.9rem; margin: 0;">
-                        Deleting your account will permanently remove:
-                    </p>
-                    <ul style="color: var(--color-text-muted); font-size: 0.9rem; margin: var(--space-2) 0 0 0; padding-left: var(--space-5);">
-                        <li>Your profile and all personal information</li>
-                        <li>All your posts and uploaded audio files</li>
-                        <li>All your comments and likes</li>
-                        <li>Your followers and following relationships</li>
-                    </ul>
-                </div>
-                <form method="POST" action="{{ url_for('delete_account') }}" onsubmit="return confirm('Are you absolutely sure you want to delete your account? This cannot be undone!');">
-                    <button type="submit" class="btn" style="background-color: var(--color-error); color: white; width: 100%;">
-                        Yes, Delete My Account
-                    </button>
-                </form>
-                <a href="{{ url_for('profile') }}" class="btn" style="margin-top: var(--space-3); width: 100%; text-align: center; display: block;">Cancel</a>
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--space-6);">
+        <div style="max-width: 600px; width: 100%; background-color: var(--color-bg-secondary); border: 2px solid var(--color-error); border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-soft);">
+            <h2 style="color: var(--color-error); font-size: 2rem; margin-bottom: var(--space-5); text-align: center;">⚠️ Delete Account</h2>
+            {% if error %}
+            <p style="color: var(--color-error); margin-bottom: var(--space-4); padding: var(--space-3); background-color: rgba(239, 68, 68, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(239, 68, 68, 0.3);">{{ error }}</p>
+            {% endif %}
+            <div style="background-color: rgba(239, 68, 68, 0.1); padding: var(--space-5); border-radius: var(--radius-md); margin-bottom: var(--space-5); border: 1px solid rgba(239, 68, 68, 0.3);">
+                <p style="color: var(--color-text); margin-bottom: var(--space-3); font-size: 1.1rem; font-weight: 600;"><strong>Warning: This action cannot be undone!</strong></p>
+                <p style="color: var(--color-text-muted); font-size: 1rem; margin-bottom: var(--space-3);">
+                    Deleting your account will permanently remove:
+                </p>
+                <ul style="color: var(--color-text-muted); font-size: 1rem; margin: 0; padding-left: var(--space-5); line-height: 1.8;">
+                    <li>Your profile and all personal information</li>
+                    <li>All your posts and uploaded audio files</li>
+                    <li>All your comments and likes</li>
+                    <li>Your followers and following relationships</li>
+                </ul>
             </div>
-        </main>
+            <form method="POST" action="{{ url_for('delete_account') }}" onsubmit="return confirm('Are you absolutely sure you want to delete your account? This cannot be undone!');" style="display: flex; flex-direction: column; gap: var(--space-4);">
+                <button type="submit" class="btn" style="background-color: var(--color-error); color: white; width: 100%; padding: var(--space-4) var(--space-6); font-size: 1.1rem; font-weight: 600;">
+                    Yes, Delete My Account
+                </button>
+            </form>
+            <a href="{{ url_for('profile') }}" class="btn" style="margin-top: var(--space-4); width: 100%; text-align: center; display: block; padding: var(--space-4) var(--space-6); font-size: 1rem;">Cancel</a>
+        </div>
     </div>
+
+    {% include "_footer.html" %}
 </body>
 </html>
 

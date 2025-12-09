@@ -1,7 +1,7 @@
 from flask import request, make_response, render_template
 import mysql.connector
 import re 
-# import dictionary
+import dictionary
 
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -18,13 +18,30 @@ UPLOAD_ITEM_FOLDER = './images'
 
 ##############################
 allowed_languages = ["english", "danish", "spanish"]
-google_spread_sheet_key = ""
+google_spread_sheet_key = "1idGoFNeQMca6Q1mJpr4HPbuXfRdDE9DHmOOnvIt-b3Q"
 default_language = "english"
 
+# Map language names to codes
+language_code_map = {
+    "english": "en",
+    "danish": "dk",
+    "spanish": "sp"
+}
+
 def lans(key):
-    with open("dictionary.json", 'r', encoding='utf-8') as file:
-        data = json.load(file)
-    return data[key][default_language]
+    """Get translation for current language from dictionary module."""
+    lang_code = language_code_map.get(default_language, "en")
+    try:
+        dict_obj = getattr(dictionary, key)
+        return dict_obj.get(lang_code, dict_obj.get("en", key))
+    except AttributeError:
+        # Fallback to JSON if key not in dictionary module
+        try:
+            with open("dictionary.json", 'r', encoding='utf-8') as file:
+                data = json.load(file)
+            return data.get(key, {}).get(default_language, key)
+        except:
+            return key
 
 ##############################
 def db():
@@ -57,9 +74,13 @@ def no_cache(view):
 ##############################
 REGEX_EMAIL = "^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$"
 def validate_user_email(lan = "en"):
-    user_email = request.form.get("email", "").strip()
+    """Validate user email using dictionary for error messages."""
+    user_email = request.form.get("user_email", "").strip()
+    if not user_email:
+        user_email = request.form.get("email", "").strip()  # Fallback for existing forms
+    lang_code = language_code_map.get(lan, "en") if isinstance(lan, str) and lan in language_code_map else (lan if lan in ["en", "dk", "sp"] else "en")
     if not re.match(REGEX_EMAIL, user_email):
-        raise Exception("Invalid email address", 400)
+        raise Exception(dictionary.invalid_email[lang_code], 400)
     return user_email
 
 ##############################
@@ -67,7 +88,10 @@ USER_USERNAME_MIN = 2
 USER_USERNAME_MAX = 20
 REGEX_USER_USERNAME = f"^.{{{USER_USERNAME_MIN},{USER_USERNAME_MAX}}}$"
 def validate_user_username():
-    user_username = request.form.get("name", "").strip()
+    """Validate username with proper field name."""
+    user_username = request.form.get("user_username", "").strip()
+    if not user_username:
+        user_username = request.form.get("name", "").strip()  # Fallback for existing forms
     error = f"username min {USER_USERNAME_MIN} max {USER_USERNAME_MAX} characters"
     if len(user_username) < USER_USERNAME_MIN: raise Exception(error, 400)
     if len(user_username) > USER_USERNAME_MAX: raise Exception(error, 400)
@@ -78,7 +102,10 @@ USER_FIRST_NAME_MIN = 2
 USER_FIRST_NAME_MAX = 20
 REGEX_USER_FIRST_NAME = f"^.{{{USER_FIRST_NAME_MIN},{USER_FIRST_NAME_MAX}}}$"
 def validate_user_first_name():
-    user_first_name = request.form.get("name", "").strip()
+    """Validate first name with proper field name."""
+    user_first_name = request.form.get("user_first_name", "").strip()
+    if not user_first_name:
+        user_first_name = request.form.get("name", "").strip()  # Fallback for existing forms
     error = f"first name min {USER_FIRST_NAME_MIN} max {USER_FIRST_NAME_MAX} characters"
     if not re.match(REGEX_USER_FIRST_NAME, user_first_name): raise Exception(error, 400)
     return user_first_name
@@ -89,9 +116,13 @@ USER_PASSWORD_MIN = 6
 USER_PASSWORD_MAX = 50
 REGEX_USER_PASSWORD = f"^.{{{USER_PASSWORD_MIN},{USER_PASSWORD_MAX}}}$"
 def validate_user_password(lan = "en"):
-    user_password = request.form.get("password", "").strip()
+    """Validate password using dictionary for error messages."""
+    user_password = request.form.get("user_password", "").strip()
+    if not user_password:
+        user_password = request.form.get("password", "").strip()  # Fallback for existing forms
+    lang_code = language_code_map.get(lan, "en") if isinstance(lan, str) and lan in language_code_map else (lan if lan in ["en", "dk", "sp"] else "en")
     if not re.match(REGEX_USER_PASSWORD, user_password):
-        raise Exception("Invalid password", 400)
+        raise Exception(dictionary.invalid_password[lang_code], 400)
     return user_password
 
 
@@ -99,7 +130,10 @@ def validate_user_password(lan = "en"):
 
 ##############################
 def validate_user_password_confirm():
+    """Validate password confirmation."""
     user_password = request.form.get("user_password_confirm", "").strip()
+    if not user_password:
+        user_password = request.form.get("password_confirm", "").strip()  # Fallback for existing forms
     if not re.match(REGEX_USER_PASSWORD, user_password): raise Exception("Twitter exception - Invalid confirm password", 400)
     return user_password
 

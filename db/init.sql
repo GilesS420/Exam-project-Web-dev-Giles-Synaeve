@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS posts (
     media_path VARCHAR(255),
     media_type ENUM('image','video','audio','file') DEFAULT NULL,
     total_likes INT DEFAULT 0,
+    is_blocked BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -125,7 +126,20 @@ CREATE TABLE IF NOT EXISTS follows (
 );
 
 -- ============================================
--- 9. Admin logs
+-- 9. User blocks (user-to-user blocking)
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_blocks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    blocker_id INT NOT NULL,
+    blocked_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_block (blocker_id, blocked_id)
+);
+
+-- ============================================
+-- 10. Admin logs
 -- ============================================
 CREATE TABLE IF NOT EXISTS admin_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,

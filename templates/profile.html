@@ -8,32 +8,19 @@
     <link rel="stylesheet" href="/static/css/home.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="nav-container">
-            <div class="logo">EchoVerse</div>
-            <div class="nav-links">
-                <a href="{{ url_for('home') }}" class="nav-link">Home</a>
-                <a href="#" class="nav-link">Explore</a>
-                <a href="{{ url_for('profile') }}" class="nav-link active">Profile</a>
-            </div>
-            <div class="nav-user">
-                <a href="{{ url_for('profile') }}" class="user-name">{{ user.name }}</a>
-                <a href="{{ url_for('logout') }}" class="btn btn-small">Logout</a>
-            </div>
-        </div>
-    </nav>
+    {% include "_header.html" %}
 
-    <div class="container">
-        <main class="feed" style="max-width: 800px; margin: 0 auto;">
+    <div class="container" style="grid-template-columns: 1fr; max-width: 1100px; margin: 0 auto; flex: 1;">
+        <main class="feed" style="width: 100%; max-width: 100%;">
             <!-- Profile Header -->
             <div class="profile-header">
                 <div class="profile-avatar-section">
-                    <img src="{{ url_for('static', filename=user.avatar) if user.avatar and not user.avatar.startswith('http') else (user.avatar or url_for('static', filename='default-avatar.png')) }}" 
+                    <img src="{{ url_for('static', filename=user.avatar) if user.avatar and not user.avatar.startswith('http') else (user.avatar or url_for('static', filename='images/default-avatar.svg')) }}" 
                          alt="{{ user.name }}" 
                          class="profile-avatar" 
                          id="avatar-preview"
-                         onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                         onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
+                    {% if is_own_profile %}
                     <form method="POST" action="{{ url_for('update_avatar') }}" enctype="multipart/form-data" class="avatar-form">
                         <label class="file-upload-label">
                             <input type="file" name="avatar_file" accept="image/*" class="avatar-file-input" id="avatar-file-input" style="display: none;">
@@ -41,6 +28,7 @@
                         </label>
                         <button type="submit" class="btn btn-small">Update Avatar</button>
                     </form>
+                    {% endif %}
                 </div>
                 <div class="profile-info">
                     <h1>{{ user.name }}</h1>
@@ -62,16 +50,35 @@
                             <span class="stat-label">Followers</span>
                         </div>
                     </div>
+                    {% if not is_own_profile %}
+                    <div class="profile-actions" style="margin-top: var(--space-4); display: flex; gap: var(--space-3);">
+                        <form method="POST" action="{{ url_for('toggle_follow', user_id=user.id) }}" style="display: inline;">
+                            <button type="submit" class="btn {{ 'btn-secondary' if is_following else '' }}">
+                                {{ 'Unfollow' if is_following else 'Follow' }}
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('toggle_user_block', user_id=user.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to {{ 'unblock' if is_blocked_by_viewer else 'block' }} this user?');">
+                            <button type="submit" class="btn" style="background-color: var(--color-error); color: white;">
+                                {{ 'Unblock' if is_blocked_by_viewer else 'Block' }}
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
             <!-- Tabs -->
             <div class="profile-tabs">
+                {% if is_own_profile %}
                 <button class="tab-btn active" onclick="showTab('edit')">Edit Profile</button>
                 <button class="tab-btn" onclick="showTab('posts')">My Posts</button>
+                {% else %}
+                <button class="tab-btn active" onclick="showTab('posts')">Posts</button>
+                {% endif %}
             </div>
 
             <!-- Edit Profile Tab -->
+            {% if is_own_profile %}
             <div id="edit-tab" class="tab-content active">
                 <div class="profile-sections">
                     <!-- Update Bio -->
@@ -89,20 +96,47 @@
                     <!-- Update Name -->
                     <section class="profile-section">
                         <h2>Update Name</h2>
-                        <form method="POST" action="{{ url_for('update_name') }}" class="profile-form">
-                            <input type="text" name="name" value="{{ user.name }}" placeholder="Name" required minlength="2" maxlength="100" class="profile-input">
+                        <form method="POST" action="{{ url_for('update_name') }}" class="profile-form" id="update-name-form">
+                            <input type="text" name="name" value="{{ user.name }}" placeholder="Name" required 
+                                   minlength="2" maxlength="100" pattern=".{2,100}" 
+                                   title="Name must be between 2 and 100 characters" class="profile-input">
                             <button type="submit" class="btn btn-primary">Update Name</button>
                         </form>
+                        <script>
+                            // Front-end validation for name update
+                            document.getElementById('update-name-form')?.addEventListener('submit', function(e) {
+                                const name = this.querySelector('input[name="name"]').value.trim();
+                                if (name.length < 2 || name.length > 100) {
+                                    e.preventDefault();
+                                    alert('Name must be between 2 and 100 characters');
+                                    return false;
+                                }
+                            });
+                        </script>
                     </section>
 
                     <!-- Update Email -->
                     <section class="profile-section">
                         <h2>Update Email</h2>
                         <p class="section-note">A verification email will be sent to your new email address.</p>
-                        <form method="POST" action="{{ url_for('update_email') }}" class="profile-form">
-                            <input type="email" name="email" value="{{ user.email }}" placeholder="Email" required class="profile-input">
+                        <form method="POST" action="{{ url_for('update_email') }}" class="profile-form" id="update-email-form">
+                            <input type="email" name="email" value="{{ user.email }}" placeholder="Email" required 
+                                   pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" 
+                                   title="Please enter a valid email address" class="profile-input">
                             <button type="submit" class="btn btn-primary">Update Email</button>
                         </form>
+                        <script>
+                            // Front-end validation for email update
+                            document.getElementById('update-email-form')?.addEventListener('submit', function(e) {
+                                const email = this.querySelector('input[name="email"]').value.trim();
+                                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                if (!emailRegex.test(email)) {
+                                    e.preventDefault();
+                                    alert('Please enter a valid email address');
+                                    return false;
+                                }
+                            });
+                        </script>
                     </section>
 
                     <!-- Change Password -->
@@ -124,20 +158,21 @@
                     </section>
                 </div>
             </div>
+            {% endif %}
 
-            <!-- My Posts Tab -->
-            <div id="posts-tab" class="tab-content">
+            <!-- Posts Tab -->
+            <div id="posts-tab" class="tab-content {{ 'active' if not is_own_profile else '' }}">
                 <div class="profile-posts">
                     {% if posts %}
                         {% for post in posts %}
                         <article class="post-card" id="post-{{ post.id }}">
                             <div class="post-header">
-                                <img src="{{ url_for('static', filename=user.avatar) if user.avatar and not user.avatar.startswith('http') else (user.avatar or url_for('static', filename='default-avatar.png')) }}" 
+                                <img src="{{ url_for('static', filename=user.avatar) if user.avatar and not user.avatar.startswith('http') else (user.avatar or url_for('static', filename='images/default-avatar.svg')) }}" 
                                      alt="{{ user.name }}" 
                                      class="avatar"
-                                     onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                                     onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
                                 <div class="post-author">
-                                    <a href="{{ url_for('profile') }}" class="author-name">{{ user.name }}</a>
+                                    <a href="{{ url_for('profile', profile_user_id=user.id) }}" class="author-name">{{ user.name }}</a>
                                     <span class="post-time">{{ post.created_at.strftime('%b %d, %Y at %I:%M %p') if post.created_at else '' }}</span>
                                 </div>
                             </div>
@@ -192,27 +227,31 @@
                             <div class="post-actions">
                                 <span class="action-btn">❤️ {{ post.total_likes or 0 }}</span>
                                 <button class="action-btn" onclick="toggleComments({{ post.id }})">💬 Comment</button>
+                                {% if is_own_profile %}
                                 <button class="action-btn" onclick="toggleEdit({{ post.id }})">✏️ Edit</button>
                                 <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" class="action-form" onsubmit="return confirm('Are you sure you want to delete this post?');">
                                     <button type="submit" class="action-btn delete-btn">🗑️ Delete</button>
                                 </form>
+                                {% endif %}
                             </div>
                             
                             <!-- Comments Section (hidden by default) -->
                             <div class="comments-section" id="comments-{{ post.id }}" style="display: none;">
-                                <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}" class="comment-form">
-                                    <input type="text" name="content" placeholder="Write a comment..." class="comment-input" required>
-                                    <button type="submit" class="btn btn-small">Post</button>
-                                </form>
+                            <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}" class="comment-form">
+                                <input type="text" name="content" placeholder="Write a comment..." class="comment-input" 
+                                       required maxlength="500" minlength="1" 
+                                       title="Comment must be between 1 and 500 characters">
+                                <button type="submit" class="btn btn-small">Post</button>
+                            </form>
                                 <div class="comments-list">
                                     {% if post.comments %}
                                         {% for comment in post.comments %}
                                         <div class="comment-item">
                                             <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
-                                                <img src="{% if comment.user_avatar %}{% if comment.user_avatar.startswith('http') %}{{ comment.user_avatar }}{% else %}{{ url_for('static', filename=comment.user_avatar) }}{% endif %}{% else %}https://avatar.iran.liara.run/public/40{% endif %}" 
+                                                <img src="{% if comment.user_avatar %}{% if comment.user_avatar.startswith('http') %}{{ comment.user_avatar }}{% else %}{{ url_for('static', filename=comment.user_avatar) }}{% endif %}{% else %}{{ url_for('static', filename='images/default-avatar.svg') }}{% endif %}" 
                                                      alt="{{ comment.user_name }}" 
                                                      class="avatar-small"
-                                                     onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                                                     onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
                                                 <div style="flex: 1;">
                                                     <div style="display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-1);">
                                                         <strong style="color: var(--color-text); font-size: 0.9rem;">{{ comment.user_name }}</strong>
@@ -317,6 +356,8 @@
             }
         }
     </script>
+
+    {% include "_footer.html" %}
 </body>
 </html>
 

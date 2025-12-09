@@ -1,0 +1,152 @@
+{
+  "app_name": {
+    "english": "EchoVerse",
+    "danish": "EchoVerse",
+    "spanish": "EchoVerse"
+  },
+  "comment": {
+    "english": "Comment",
+    "danish": "Kommentar",
+    "spanish": "Comentario"
+  },
+  "confirm_password": {
+    "english": "Confirm Password",
+    "danish": "Bekræft adgangskode",
+    "spanish": "Confirmar contraseña"
+  },
+  "create_account": {
+    "english": "Create your account",
+    "danish": "Opret din konto",
+    "spanish": "Crea tu cuenta"
+  },
+  "delete": {
+    "english": "Delete",
+    "danish": "Slet",
+    "spanish": "Eliminar"
+  },
+  "edit": {
+    "english": "Edit",
+    "danish": "Rediger",
+    "spanish": "Editar"
+  },
+  "email": {
+    "english": "Email",
+    "danish": "E-mail",
+    "spanish": "Correo electrónico"
+  },
+  "email_not_verified": {
+    "english": "Please verify your email address before logging in. Check your inbox for the verification link.",
+    "danish": "Bekræft venligst din e-mailadresse før du logger ind. Tjek din indbakke for bekræftelseslinket.",
+    "spanish": "Por favor verifique su dirección de correo electrónico antes de iniciar sesión. Revise su bandeja de entrada para el enlace de verificación."
+  },
+  "explore": {
+    "english": "Explore",
+    "danish": "Udforsk",
+    "spanish": "Explorar"
+  },
+  "follow": {
+    "english": "Follow",
+    "danish": "Følg",
+    "spanish": "Seguir"
+  },
+  "followers": {
+    "english": "Followers",
+    "danish": "Følgere",
+    "spanish": "Seguidores"
+  },
+  "following": {
+    "english": "Following",
+    "danish": "Følger",
+    "spanish": "Siguiendo"
+  },
+  "forgot_password": {
+    "english": "Forgot Password?",
+    "danish": "Glemt adgangskode?",
+    "spanish": "¿Olvidaste tu contraseña?"
+  },
+  "home": {
+    "english": "Home",
+    "danish": "Hjem",
+    "spanish": "Inicio"
+  },
+  "invalid_credentials": {
+    "english": "Invalid email or password.",
+    "danish": "Ugyldig e-mail eller adgangskode.",
+    "spanish": "Correo electrónico o contraseña inválidos."
+  },
+  "invalid_email": {
+    "english": "Please enter a valid email address.",
+    "danish": "Indtast venligst en gyldig e-mailadresse.",
+    "spanish": "Por favor ingrese una dirección de correo electrónico válida."
+  },
+  "login": {
+    "english": "Login",
+    "danish": "Log ind",
+    "spanish": "Iniciar sesión"
+  },
+  "logout": {
+    "english": "Logout",
+    "danish": "Log ud",
+    "spanish": "Cerrar sesión"
+  },
+  "name": {
+    "english": "Name",
+    "danish": "Navn",
+    "spanish": "Nombre"
+  },
+  "password": {
+    "english": "Password",
+    "danish": "Adgangskode",
+    "spanish": "Contraseña"
+  },
+  "password_required": {
+    "english": "Password is required.",
+    "danish": "Adgangskode er påkrævet.",
+    "spanish": "Se requiere contraseña."
+  },
+  "post": {
+    "english": "Post",
+    "danish": "Indlæg",
+    "spanish": "Publicar"
+  },
+  "posts": {
+    "english": "Posts",
+    "danish": "Indlæg",
+    "spanish": "Publicaciones"
+  },
+  "profile": {
+    "english": "Profile",
+    "danish": "Profil",
+    "spanish": "Perfil"
+  },
+  "search": {
+    "english": "Search users, tracks...",
+    "danish": "Søg brugere, numre...",
+    "spanish": "Buscar usuarios, pistas..."
+  },
+  "share_sound": {
+    "english": "Share your sound...",
+    "danish": "Del dit lyd...",
+    "spanish": "Comparte tu sonido..."
+  },
+  "signup": {
+    "english": "Sign Up",
+    "danish": "Tilmeld dig",
+    "spanish": "Registrarse"
+  },
+  "unfollow": {
+    "english": "Unfollow",
+    "danish": "Følg ikke",
+    "spanish": "Dejar de seguir"
+  },
+  "welcome_back": {
+    "english": "Welcome back",
+    "danish": "Velkommen tilbage",
+    "spanish": "Bienvenido de nuevo"
+  },
+  "like": {
+    "english": "like",
+    "danish": "lide",
+    "spanish": "gusta"
+  }
+}

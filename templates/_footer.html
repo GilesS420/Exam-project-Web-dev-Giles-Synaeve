@@ -1,0 +1,37 @@
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>EchoVerse</h4>
+                <p>Share your sounds with the world</p>
+            </div>
+            <div class="footer-section">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="{{ url_for('home') if session.get('user') or session.get('user_id') else url_for('login') }}">Home</a></li>
+                    <li><a href="{{ url_for('profile') if session.get('user') or session.get('user_id') else url_for('login') }}">Profile</a></li>
+                    {% if session.get('user') or session.get('user_id') %}
+                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                    {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                    <li><a href="{{ url_for('signup') }}">Sign Up</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Support</h4>
+                <ul>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">Contact Us</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Terms of Service</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 EchoVerse. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+

@@ -8,22 +8,9 @@
     <link rel="stylesheet" href="/static/css/home.css">
 </head>
 <body>
-    <nav class="nav">
-        <div class="nav-container">
-            <div class="logo">EchoVerse</div>
-            <div class="nav-links">
-                <a href="{{ url_for('home') }}" class="nav-link">Home</a>
-                <a href="#" class="nav-link">Explore</a>
-                <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
-            </div>
-            <div class="nav-user">
-                <a href="{{ url_for('profile') }}" class="user-name">{{ session.get('user_name', '') }}</a>
-                <a href="{{ url_for('logout') }}" class="btn btn-small">Logout</a>
-            </div>
-        </div>
-    </nav>
+    {% include "_header.html" %}
 
-    <div class="container">
+    <div class="container" style="flex: 1;">
         <main class="feed" style="max-width: 800px; margin: 0 auto;">
             <div class="search-section" style="margin-bottom: var(--space-5);">
                 <form method="GET" action="{{ url_for('search') }}" class="search-form">
@@ -39,12 +26,12 @@
                 <h3>Users</h3>
                 {% for user in users %}
                 <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3); border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <img src="{% if user.avatar %}{% if user.avatar.startswith('http') %}{{ user.avatar }}{% else %}{{ url_for('static', filename=user.avatar) }}{% endif %}{% else %}https://avatar.iran.liara.run/public/40{% endif %}" 
+                    <img src="{% if user.avatar %}{% if user.avatar.startswith('http') %}{{ user.avatar }}{% else %}{{ url_for('static', filename=user.avatar) }}{% endif %}{% else %}{{ url_for('static', filename='images/default-avatar.svg') }}{% endif %}" 
                          alt="{{ user.name }}" 
                          class="avatar"
-                         onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                         onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
                     <div style="flex: 1;">
-                        <a href="#" style="color: var(--color-text); text-decoration: none; font-weight: 600; display: block;">{{ user.name }}</a>
+                        <a href="{{ url_for('profile', profile_user_id=user.id) }}" style="color: var(--color-text); text-decoration: none; font-weight: 600; display: block;">{{ user.name }}</a>
                         <p style="color: var(--color-text-muted); font-size: 0.85rem; margin: 0;">{{ user.email }}</p>
                     </div>
                     {% if user.id != current_user_id %}
@@ -65,12 +52,12 @@
                 {% for post in posts %}
                 <article class="post-card">
                     <div class="post-header">
-                        <img src="{% if post.user_avatar %}{% if post.user_avatar.startswith('http') %}{{ post.user_avatar }}{% else %}{{ url_for('static', filename=post.user_avatar) }}{% endif %}{% else %}https://avatar.iran.liara.run/public/40{% endif %}" 
+                        <img src="{% if post.user_avatar %}{% if post.user_avatar.startswith('http') %}{{ post.user_avatar }}{% else %}{{ url_for('static', filename=post.user_avatar) }}{% endif %}{% else %}{{ url_for('static', filename='images/default-avatar.svg') }}{% endif %}" 
                              alt="{{ post.user_name }}" 
                              class="avatar"
-                             onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                             onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
                         <div class="post-author">
-                            <a href="#" class="author-name">{{ post.user_name }}</a>
+                            <a href="{{ url_for('profile', profile_user_id=post.user_id) }}" class="author-name">{{ post.user_name }}</a>
                             <span class="post-time">{{ post.created_at.strftime('%b %d, %Y') if post.created_at else '' }}</span>
                         </div>
                     </div>
@@ -103,12 +90,12 @@
                 {% for song in songs %}
                 <article class="post-card">
                     <div class="post-header">
-                        <img src="{% if song.user_avatar %}{% if song.user_avatar.startswith('http') %}{{ song.user_avatar }}{% else %}{{ url_for('static', filename=song.user_avatar) }}{% endif %}{% else %}https://avatar.iran.liara.run/public/40{% endif %}" 
+                        <img src="{% if song.user_avatar %}{% if song.user_avatar.startswith('http') %}{{ song.user_avatar }}{% else %}{{ url_for('static', filename=song.user_avatar) }}{% endif %}{% else %}{{ url_for('static', filename='images/default-avatar.svg') }}{% endif %}" 
                              alt="{{ song.user_name }}" 
                              class="avatar"
-                             onerror="this.src='https://avatar.iran.liara.run/public/40'">
+                             onerror="this.src='{{ url_for('static', filename='images/default-avatar.svg') }}'">
                         <div class="post-author">
-                            <a href="#" class="author-name">{{ song.user_name }}</a>
+                            <a href="{{ url_for('profile', profile_user_id=song.user_id) }}" class="author-name">{{ song.user_name }}</a>
                             <span class="post-time">{{ song.created_at.strftime('%b %d, %Y') if song.created_at else '' }}</span>
                         </div>
                     </div>
@@ -145,6 +132,8 @@
             {% endif %}
         </main>
     </div>
+
+    {% include "_footer.html" %}
 </body>
 </html>
 
